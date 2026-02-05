@@ -71,8 +71,8 @@ function renderTable() {
         thead.innerHTML = `
             <tr>
                 ${visibleColumns.map(col => `
-                    <th data-sort="${col.key}">
-                        ${col.label} 
+                    <th data-sort="${escapeHTML(col.key)}">
+                        ${escapeHTML(col.label)} 
                         <span class="sort-icon">${sortColumn === col.key ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}</span>
                     </th>
                 `).join('')}
@@ -146,11 +146,11 @@ function renderTable() {
                 if (col.key === 'estado') {
                     return `<td><span class="estado-badge" style="background-color: ${estadoInfo.color}20; color: ${estadoInfo.color}; border: 1px solid ${estadoInfo.color}40;">
                                 <span class="estado-indicator" style="background-color: ${estadoInfo.color};"></span>
-                                ${content}
+                                ${escapeHTML(content)}
                             </span></td>`;
                 }
 
-                return `<td>${content}</td>`;
+                return `<td>${escapeHTML(content)}</td>`;
             }).join('');
 
             // Agregar columna fija de progreso
@@ -363,7 +363,19 @@ function exportToPDF() {
     doc.save('procedimientos_universidad_central.pdf');
 }
 
+// Función auxiliar para escapar HTML (Prevenir XSS)
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // Inicializar tabla al cargar
 document.addEventListener('DOMContentLoaded', () => {
     initTable();
 });
+

@@ -1,8 +1,7 @@
-// Credenciales de administrador (en producción, esto debe estar en el backend)
-const ADMIN_CREDENTIALS = {
-    username: 'RALVARADOA',
-    password: 'RIKI2026$' // En producción, usar hash bcrypt
-};
+// La autenticación ahora se maneja mediante validación de hash o Supabase Auth.
+// NO ALMACENAR CONTRASEÑAS EN TEXTO PLANO.
+const ADMIN_HASH = '4692796e6223a5cf94d8a011ed0262141577771764eb8894df3c519c5c935492'; // SHA-256 de la contraseña anterior
+
 
 // Estado de autenticación
 let isAuthenticated = false;
@@ -121,32 +120,55 @@ function showDashboardView() {
     }
 }
 
-// Función para manejar login
-function handleLogin(e) {
+// Función para manejar login con mayor seguridad
+async function handleLogin(e) {
     e.preventDefault();
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const usernameInput = document.getElementById('username').value.trim();
+    const passwordInput = document.getElementById('password').value;
     const errorDiv = document.getElementById('loginError');
 
-    // Validar credenciales
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-        isAuthenticated = true;
+    // Validación básica de campos
+    if (!usernameInput || !passwordInput) {
+        errorDiv.textContent = 'Por favor, complete todos los campos';
+        errorDiv.style.display = 'block';
+        return;
+    }
 
-        // Guardar sesión
-        sessionStorage.setItem('uc_admin_session', 'true');
+    try {
+        // En un entorno PRO, aquí usaríamos supabase.auth.signInWithPassword()
+        // Para esta mejora, validamos contra el hash para no exponer la clave original en el código
+        const encoder = new TextEncoder();
+        const data = encoder.encode(passwordInput);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-        // Mostrar dashboard admin
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('adminDashboard').style.display = 'block';
+        const validUser = 'RALVARADOA';
 
-        // Limpiar formulario
-        document.getElementById('loginFormElement').reset();
-        errorDiv.style.display = 'none';
-    } else {
-        // Mostrar error
+        if (usernameInput.toUpperCase() === validUser && passwordHash === ADMIN_HASH) {
+            isAuthenticated = true;
+
+            // Generar un token de sesión temporal (más seguro que 'true')
+            const sessionToken = btoa(usernameInput + Date.now());
+            sessionStorage.setItem('uc_admin_session', sessionToken);
+
+            // Mostrar dashboard admin
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('adminDashboard').style.display = 'block';
+
+            // Limpiar formulario y errores
+            document.getElementById('loginFormElement').reset();
+            errorDiv.style.display = 'none';
+
+            console.log("[Security] Sesión administrativa iniciada correctamente.");
+        } else {
+            throw new Error('Credenciales inválidas');
+        }
+    } catch (error) {
         errorDiv.textContent = 'Usuario o contraseña incorrectos';
         errorDiv.style.display = 'block';
+        console.warn("[Security] Intento de acceso fallido.");
     }
 }
 
@@ -165,7 +187,7 @@ function handleLogout() {
 // Función para verificar sesión guardada
 function checkSavedSession() {
     const savedSession = sessionStorage.getItem('uc_admin_session');
-    if (savedSession === 'true') {
+    if (savedSession && savedSession.length > 10) {
         isAuthenticated = true;
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('adminDashboard').style.display = 'block';
@@ -342,43 +364,77 @@ function handleFileSelect(file, sistema, uploadArea, filePreview, previewTableDi
 }
 
 // Función para mostrar preview
-// Función para mostrar preview
+// Función para mostrar preview con protección XSS
 function showImportPreview(data, sistema, uploadArea, filePreview, previewTableDiv) {
     uploadArea.style.display = 'none';
     filePreview.style.display = 'block';
 
-    // Usar solo columnas visibles de la configuración
     const visibleColumns = COLUMN_CONFIG.filter(col => col.visible);
 
-    previewTableDiv.innerHTML = `
-        <p style="margin-bottom: 1rem; color: var(--text-secondary);">
-            Se encontraron <strong style="color: var(--uc-green-light);">${data.length}</strong> procedimientos para <strong style="color: var(--uc-green-light);">${sistema}</strong>.
-        </p>
-        <div class="table-wrapper" style="max-height: 300px; overflow-y: auto;">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        ${visibleColumns.map(col => `<th>${col.label}</th>`).join('')}
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.slice(0, 5).map(proc => `
-                        <tr>
-                            ${visibleColumns.map(col => `<td>${proc[col.key] || ''}</td>`).join('')}
-                        </tr>
-                    `).join('')}
-                    ${data.length > 5 ? `
-                        <tr>
-                            <td colspan="${visibleColumns.length}" style="text-align: center; color: var(--text-muted); font-style: italic;">
-                                ... y ${data.length - 5} más
-                            </td>
-                        </tr>
-                    ` : ''}
-                </tbody>
-            </table>
-        </div>
-    `;
+    // Limpiar contenido previo de forma segura
+    previewTableDiv.innerHTML = '';
+
+    const infoText = document.createElement('p');
+    infoText.style.cssText = 'margin-bottom: 1rem; color: var(--text-secondary);';
+    infoText.innerHTML = `Se encontraron <strong style="color: var(--uc-green-light);">${data.length}</strong> procedimientos para <strong style="color: var(--uc-green-light);">${escapeHTML(sistema)}</strong>.`;
+    previewTableDiv.appendChild(infoText);
+
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'table-wrapper';
+    tableWrapper.style.cssText = 'max-height: 300px; overflow-y: auto;';
+
+    const table = document.createElement('table');
+    table.className = 'data-table';
+
+    // Header
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    visibleColumns.forEach(col => {
+        const th = document.createElement('th');
+        th.textContent = col.label;
+        headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Body
+    const tbody = document.createElement('tbody');
+    data.slice(0, 5).forEach(proc => {
+        const tr = document.createElement('tr');
+        visibleColumns.forEach(col => {
+            const td = document.createElement('td');
+            td.textContent = proc[col.key] || '';
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+
+    if (data.length > 5) {
+        const moreRow = document.createElement('tr');
+        const moreTd = document.createElement('td');
+        moreTd.colSpan = visibleColumns.length;
+        moreTd.style.cssText = 'text-align: center; color: var(--text-muted); font-style: italic;';
+        moreTd.textContent = `... y ${data.length - 5} más`;
+        moreRow.appendChild(moreTd);
+        tbody.appendChild(moreRow);
+    }
+
+    table.appendChild(tbody);
+    tableWrapper.appendChild(table);
+    previewTableDiv.appendChild(tableWrapper);
 }
+
+// Función auxiliar para escapar HTML (Prevenir XSS)
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 
 // Función para resetear área de carga
 function resetUploadArea(uploadArea, fileInput) {
