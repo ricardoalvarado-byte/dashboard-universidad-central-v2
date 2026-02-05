@@ -1,6 +1,6 @@
 // La autenticación ahora se maneja mediante validación de hash o Supabase Auth.
 // NO ALMACENAR CONTRASEÑAS EN TEXTO PLANO.
-const ADMIN_HASH = '4692796e6223a5cf94d8a011ed0262141577771764eb8894df3c519c5c935492'; // SHA-256 de la contraseña anterior
+const ADMIN_HASH = '1f65bb51842cd58cc3f545a968600d8b76c8f9db195c470129a66ca7737e419c'; // SHA-256 corrección
 
 
 // Estado de autenticación
