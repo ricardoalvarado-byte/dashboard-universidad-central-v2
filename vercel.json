@@ -1,0 +1,11 @@
+{
+    "version": 2,
+    "public": true,
+    "name": "dashboard-universidad-central",
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/$1"
+        }
+    ]
+}
