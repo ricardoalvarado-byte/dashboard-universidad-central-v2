@@ -686,6 +686,7 @@ window.saveColumnsToStorage = () => {
 // Función para guardar fecha de última actualización
 function saveLastUpdateDate() {
     const now = new Date();
+    window.lastUpdateDate = now;
     localStorage.setItem('uc_last_update', now.toISOString());
     if (typeof window.updateLastUpdateDisplay === 'function') {
         window.updateLastUpdateDisplay();

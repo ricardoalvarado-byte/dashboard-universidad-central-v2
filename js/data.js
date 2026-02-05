@@ -152,8 +152,21 @@ async function fetchFromSupabase() {
                 gestorFuncional: p.gestor_funcional || '',
                 estado: p.estado || 'Pendiente',
                 proceso: p.proceso || '',
-                numero: p.numero || ''
+                numero: p.numero || '',
+                updatedAt: p.updated_at || p.created_at || null
             }));
+
+            // Calcular última fecha de actualización
+            const dates = procedimientos
+                .map(p => p.updatedAt)
+                .filter(Boolean)
+                .map(d => new Date(d).getTime());
+
+            if (dates.length > 0) {
+                const latestDate = new Date(Math.max(...dates));
+                window.lastUpdateDate = latestDate;
+                localStorage.setItem('uc_last_update', latestDate.toISOString());
+            }
 
             window.procedimientos = procedimientos;
             return true;

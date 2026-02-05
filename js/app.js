@@ -55,11 +55,14 @@ function initializeApp() {
 function updateLastUpdateDisplay() {
     const container = document.getElementById('lastUpdateContainer');
     const dateSpan = document.getElementById('lastUpdateDate');
-    const lastUpdate = localStorage.getItem('uc_last_update');
+
+    // Prioridad: 1. Variable global (de Supabase), 2. LocalStorage
+    const lastUpdate = window.lastUpdateDate || localStorage.getItem('uc_last_update');
 
     if (container && dateSpan && lastUpdate) {
         container.style.display = 'block';
-        dateSpan.textContent = formatDate(new Date(lastUpdate));
+        const dateObj = (lastUpdate instanceof Date) ? lastUpdate : new Date(lastUpdate);
+        dateSpan.textContent = formatDate(dateObj);
     }
 }
 window.updateLastUpdateDisplay = updateLastUpdateDisplay;
