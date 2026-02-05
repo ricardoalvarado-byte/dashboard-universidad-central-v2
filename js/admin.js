@@ -120,55 +120,31 @@ function showDashboardView() {
     }
 }
 
-// Función para manejar login con mayor seguridad
-async function handleLogin(e) {
+// Función para manejar login (Restaurado para asegurar acceso total)
+function handleLogin(e) {
     e.preventDefault();
 
     const usernameInput = document.getElementById('username').value.trim();
     const passwordInput = document.getElementById('password').value;
     const errorDiv = document.getElementById('loginError');
 
-    // Validación básica de campos
-    if (!usernameInput || !passwordInput) {
-        errorDiv.textContent = 'Por favor, complete todos los campos';
-        errorDiv.style.display = 'block';
-        return;
-    }
+    // Credenciales esperadas
+    const VALID_USER = 'RALVARADOA';
+    const VALID_PASS = 'RIKI2026$';
 
-    try {
-        // En un entorno PRO, aquí usaríamos supabase.auth.signInWithPassword()
-        // Para esta mejora, validamos contra el hash para no exponer la clave original en el código
-        const encoder = new TextEncoder();
-        const data = encoder.encode(passwordInput);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const passwordHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    if (usernameInput.toUpperCase() === VALID_USER && passwordInput === VALID_PASS) {
+        isAuthenticated = true;
+        sessionStorage.setItem('uc_admin_session', 'true');
 
-        const validUser = 'RALVARADOA';
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
 
-        if (usernameInput.toUpperCase() === validUser && passwordHash === ADMIN_HASH) {
-            isAuthenticated = true;
-
-            // Generar un token de sesión temporal (más seguro que 'true')
-            const sessionToken = btoa(usernameInput + Date.now());
-            sessionStorage.setItem('uc_admin_session', sessionToken);
-
-            // Mostrar dashboard admin
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('adminDashboard').style.display = 'block';
-
-            // Limpiar formulario y errores
-            document.getElementById('loginFormElement').reset();
-            errorDiv.style.display = 'none';
-
-            console.log("[Security] Sesión administrativa iniciada correctamente.");
-        } else {
-            throw new Error('Credenciales inválidas');
-        }
-    } catch (error) {
+        document.getElementById('loginFormElement').reset();
+        errorDiv.style.display = 'none';
+        console.log("[Admin] Sesión iniciada correctamente.");
+    } else {
         errorDiv.textContent = 'Usuario o contraseña incorrectos';
         errorDiv.style.display = 'block';
-        console.warn("[Security] Intento de acceso fallido.");
     }
 }
 
