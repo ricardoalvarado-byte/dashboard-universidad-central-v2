@@ -1,7 +1,7 @@
 // Credenciales de administrador (en producción, esto debe estar en el backend)
 const ADMIN_CREDENTIALS = {
-    username: 'admin',
-    password: 'admin123' // En producción, usar hash bcrypt
+    username: 'RALVARADOA',
+    password: 'RIKI2026$' // En producción, usar hash bcrypt
 };
 
 // Estado de autenticación
