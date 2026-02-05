@@ -374,8 +374,50 @@ function escapeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
+// Función para exportar a Excel real usando SheetJS (XLSX)
+function exportToExcel(data, filename) {
+    if (typeof XLSX === 'undefined') {
+        alert('La librería Excel no se ha cargado correctamente. Por favor, recarga la página.');
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        alert('No hay datos para exportar');
+        return;
+    }
+
+    // Preparar datos para XLSX
+    const visibleColumns = COLUMN_CONFIG.filter(col => col.visible);
+
+    const excelData = data.map(proc => {
+        const row = {};
+        visibleColumns.forEach(col => {
+            row[col.label] = proc[col.key] || '';
+        });
+
+        // Agregar % Avance calculado
+        const info = getEstadoInfo(proc.estado);
+        row['% Avance'] = info.porcentaje + '%';
+
+        return row;
+    });
+
+    // Crear hoja de trabajo y libro
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Procedimientos");
+
+    // Descargar
+    XLSX.writeFile(workbook, filename);
+}
+
 // Inicializar tabla al cargar
 document.addEventListener('DOMContentLoaded', () => {
     initTable();
 });
+
+// Exponer funciones globales
+window.exportToExcel = exportToExcel;
+window.exportToPDF = exportToPDF;
+window.updateTable = updateTable;
 
