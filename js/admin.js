@@ -272,11 +272,14 @@ function initMultiSystemUpload() {
                 if (typeof window.saveToSupabase === 'function') {
                     window.saveToSupabase(window.procedimientos).then(() => {
                         console.log("[Admin] Supabase sincronizado.");
+                        // Guardar fecha de actualización
+                        saveLastUpdateDate();
                         // Forzar recarga de contadores para asegurar visualización
                         updateSystemCounts();
                     });
                 } else {
                     saveToLocalStorage();
+                    saveLastUpdateDate();
                     updateSystemCounts();
                 }
 
@@ -447,9 +450,11 @@ async function handleSaveAll() {
 
         if (typeof window.saveToSupabase === 'function') {
             await window.saveToSupabase(window.procedimientos);
+            saveLastUpdateDate();
             alert('✅ Todos los cambios han sido sincronizados con Supabase correctamente.');
         } else {
             saveToLocalStorage();
+            saveLastUpdateDate();
             alert('✅ Cambios guardados localmente (Supabase no configurado).');
         }
     } catch (error) {
@@ -678,7 +683,17 @@ window.saveColumnsToStorage = () => {
     renderColumnsConfig();
 };
 
+// Función para guardar fecha de última actualización
+function saveLastUpdateDate() {
+    const now = new Date();
+    localStorage.setItem('uc_last_update', now.toISOString());
+    if (typeof window.updateLastUpdateDisplay === 'function') {
+        window.updateLastUpdateDisplay();
+    }
+}
+
 // Inicializar admin al cargar
 document.addEventListener('DOMContentLoaded', () => {
     initAdmin();
 });
+

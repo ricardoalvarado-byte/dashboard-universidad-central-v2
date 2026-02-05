@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✅ Datos sincronizados. Actualizando UI...');
         if (typeof updateSubsistemaOptions === 'function') updateSubsistemaOptions();
         if (typeof applyFilters === 'function') applyFilters();
+        // Mostrar fecha de actualización
+        updateLastUpdateDisplay();
     });
 });
 
@@ -48,6 +50,20 @@ function initializeApp() {
 
     console.log('✅ Sistema base inicializado correctamente');
 }
+
+// Función para actualizar el componente de fecha de actualización
+function updateLastUpdateDisplay() {
+    const container = document.getElementById('lastUpdateContainer');
+    const dateSpan = document.getElementById('lastUpdateDate');
+    const lastUpdate = localStorage.getItem('uc_last_update');
+
+    if (container && dateSpan && lastUpdate) {
+        container.style.display = 'block';
+        dateSpan.textContent = formatDate(new Date(lastUpdate));
+    }
+}
+window.updateLastUpdateDisplay = updateLastUpdateDisplay;
+
 
 // Función para agregar listeners globales
 function addGlobalListeners() {
