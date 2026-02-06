@@ -144,7 +144,7 @@ function renderTable() {
 
                 // Formato especial para estado
                 if (col.key === 'estado') {
-                    return `<td><span class="estado-badge" style="background-color: ${estadoInfo.color}20; color: ${estadoInfo.color}; border: 1px solid ${estadoInfo.color}40;">
+                    return `<td><span class="estado-badge" title="${escapeHTML(estadoInfo.descripcion)}" style="background-color: ${estadoInfo.color}20; color: ${estadoInfo.color}; border: 1px solid ${estadoInfo.color}40; cursor: help;">
                                 <span class="estado-indicator" style="background-color: ${estadoInfo.color};"></span>
                                 ${escapeHTML(content)}
                             </span></td>`;

@@ -106,6 +106,12 @@ function createEstadoFilterItem(estado, value) {
     nameDiv.appendChild(indicator);
     nameDiv.appendChild(text);
 
+    // Agregar tooltip si hay descripción
+    if (estado.descripcion) {
+        item.title = estado.descripcion;
+        item.style.cursor = 'help';
+    }
+
     const countDiv = document.createElement('div');
     countDiv.className = 'estado-count';
     countDiv.textContent = '0';
@@ -188,15 +194,33 @@ function updateConventionsPanel(filteredData) {
         const info = document.createElement('div');
         info.className = 'convention-info';
 
+        const nameContainer = document.createElement('div');
+        nameContainer.className = 'convention-name-container';
+        nameContainer.style.display = 'flex';
+        nameContainer.style.alignItems = 'center';
+        nameContainer.style.gap = '0.5rem';
+
         const name = document.createElement('div');
         name.className = 'convention-name';
         name.textContent = estado.nombre;
+
+        const helpIcon = document.createElement('span');
+        helpIcon.className = 'help-icon';
+        helpIcon.textContent = 'ⓘ';
+        helpIcon.title = estado.descripcion;
+        helpIcon.style.cursor = 'help';
+        helpIcon.style.fontSize = '0.8rem';
+        helpIcon.style.color = 'var(--text-muted)';
+        helpIcon.style.opacity = '0.7';
+
+        nameContainer.appendChild(name);
+        nameContainer.appendChild(helpIcon);
 
         const percent = document.createElement('div');
         percent.className = 'convention-percent';
         percent.textContent = `${estado.porcentaje}% de avance • ${count} procedimiento${count !== 1 ? 's' : ''}`;
 
-        info.appendChild(name);
+        info.appendChild(nameContainer);
         info.appendChild(percent);
 
         item.appendChild(colorBox);

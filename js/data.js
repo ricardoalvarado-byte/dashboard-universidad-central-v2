@@ -1,12 +1,12 @@
 // Estados con sus porcentajes y colores de semaforización
 const ESTADOS = [
-    { nombre: 'Pendiente', porcentaje: 0, color: '#ef4444', descripcion: 'Proceso no iniciado' },
-    { nombre: 'En Elaboración', porcentaje: 20, color: '#f97316', descripcion: 'En proceso de elaboración' },
-    { nombre: 'En revisión', porcentaje: 40, color: '#eab308', descripcion: 'En revisión por responsables' },
-    { nombre: 'Pendiente Ajustes', porcentaje: 60, color: '#fbbf24', descripcion: 'Requiere ajustes' },
-    { nombre: 'Ajustado', porcentaje: 70, color: '#84cc16', descripcion: 'Ajustes realizados' },
-    { nombre: 'Aprobado', porcentaje: 80, color: '#22c55e', descripcion: 'Aprobado para implementación' },
-    { nombre: 'En el sistema', porcentaje: 100, color: '#10b981', descripcion: 'Implementado en el sistema' }
+    { nombre: 'Pendiente', porcentaje: 0, color: '#ef4444', descripcion: 'No se ha iniciado la elaboración del procedimiento ni se ha entregado borrador a la Coordinación de Procesos.' },
+    { nombre: 'En Elaboración', porcentaje: 20, color: '#f97316', descripcion: 'Se cuenta con un borrador del procedimiento en desarrollo.' },
+    { nombre: 'En Revisión', porcentaje: 40, color: '#eab308', descripcion: 'La Coordinación de Procesos está revisando el documento presentado.' },
+    { nombre: 'Pendiente Ajustes', porcentaje: 60, color: '#fbbf24', descripcion: 'La Coordinación de Procesos devolvió el documento con observaciones y ajustes solicitados.' },
+    { nombre: 'Ajustado', porcentaje: 70, color: '#84cc16', descripcion: 'El área responsable realizó los ajustes solicitados al documento.' },
+    { nombre: 'Aprobado', porcentaje: 80, color: '#22c55e', descripcion: 'El líder del área revisó y aprobó el documento antes de su carga al sistema.' },
+    { nombre: 'En el Sistema', porcentaje: 100, color: '#10b981', descripcion: 'El procedimiento está cargado en el sistema Isolución con las aprobaciones correspondientes.' }
 ];
 
 // Sistemas principales

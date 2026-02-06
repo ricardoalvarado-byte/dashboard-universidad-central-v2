@@ -409,6 +409,26 @@
     color: var(--text-muted);
 }
 
+.help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    cursor: help;
+    transition: all var(--transition-base);
+}
+
+.help-icon:hover {
+    background: var(--uc-green-light);
+    color: var(--bg-dark);
+    transform: scale(1.2);
+}
+
 /* Table Section */
 .table-section {
     padding: var(--spacing-lg);
