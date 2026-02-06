@@ -250,53 +250,116 @@ function loadFromLocalStorage() {
 }
 
 // Importación
+// Importación robusta
 function importFromExcel(file, sistema, callback) {
     const reader = new FileReader();
     reader.onload = function (e) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const raw = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-            // Buscar cabecera
-            let hIndex = 0;
-            const keywords = ['NOMBRE', 'PROCEDIMIENTO', 'PROCESO'];
-            for (let i = 0; i < Math.min(20, raw.length); i++) {
-                if (raw[i] && raw[i].some(c => typeof c === 'string' && keywords.some(k => c.toUpperCase().includes(k)))) {
-                    hIndex = i; break;
+            // Intentar encontrar una hoja con datos, priorizando la primera
+            let sheet = null;
+            for (const name of workbook.SheetNames) {
+                const s = workbook.Sheets[name];
+                const range = XLSX.utils.decode_range(s['!ref'] || 'A1');
+                if (range.e.r > 0) { // Si tiene más de una fila
+                    sheet = s;
+                    break;
                 }
             }
 
+            if (!sheet) sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+            if (!raw || raw.length === 0) {
+                throw new Error("El archivo parece estar vacío.");
+            }
+
+            // Buscar la mejor fila de cabecera (la que contenga 'NOMBRE PROCEDIMIENTO' o más palabras clave)
+            let hIndex = -1;
+            let maxMatches = -1;
+            const targetKeywords = ['NOMBRE', 'PROCEDIMIENTO', 'ESTADO', 'SISTEMA', 'SUBSISTEMA'];
+
+            for (let i = 0; i < Math.min(30, raw.length); i++) {
+                const row = raw[i];
+                if (!row || !Array.isArray(row)) continue;
+
+                let matches = 0;
+                const rowStr = row.join(' ').toUpperCase();
+
+                // Prioridad absoluta si contiene el nombre exacto de la columna principal
+                if (rowStr.includes('NOMBRE PROCEDIMIENTO')) {
+                    hIndex = i;
+                    break;
+                }
+
+                targetKeywords.forEach(k => {
+                    if (rowStr.includes(k)) matches++;
+                });
+
+                if (matches > maxMatches && matches >= 2) {
+                    maxMatches = matches;
+                    hIndex = i;
+                }
+            }
+
+            if (hIndex === -1) hIndex = 0; // Fallback a la primera fila
+
             const headers = raw[hIndex] || [];
-            const colMap = { nombre: -1, subsistema: -1, area: -1, gestor: -1, estado: -1 };
+            const colMap = { nombre: -1, subsistema: -1, area: -1, gestor: -1, estado: -1, proceso: -1, numero: -1 };
+
             headers.forEach((h, idx) => {
-                if (!h) return;
-                const hh = h.toString().toUpperCase();
+                if (h === undefined || h === null) return;
+                const hh = h.toString().trim().toUpperCase();
+
                 if (hh.includes('NOMBRE PROCEDIMIENTO')) colMap.nombre = idx;
+                else if (hh === 'NOMBRE' && colMap.nombre === -1) colMap.nombre = idx;
                 else if (hh.includes('SUBSISTEMA')) colMap.subsistema = idx;
-                else if (hh.includes('AREA LÍDER')) colMap.area = idx;
+                else if (hh.includes('AREA LÍDER') || hh.includes('AREA LIDER')) colMap.area = idx;
                 else if (hh.includes('GESTOR FUNCIONAL')) colMap.gestor = idx;
-                else if (hh.includes('ESTADO GENERAL')) colMap.estado = idx;
+                else if (hh.includes('ESTADO GENERAL') || hh === 'ESTADO') colMap.estado = idx;
+                else if (hh === 'PROCESO') colMap.proceso = idx;
+                else if (hh === 'N°' || hh === 'Nº' || hh === 'NUMERO' || hh === 'N.') colMap.numero = idx;
             });
+
+            console.log("Detección de columnas:", colMap);
+
+            if (colMap.nombre === -1) {
+                // Si no encontramos la columna nombre, intentamos buscar una que se le parezca
+                colMap.nombre = headers.findIndex(h => h && h.toString().toUpperCase().includes('NOMBRE'));
+            }
 
             const results = [];
             for (let i = hIndex + 1; i < raw.length; i++) {
                 const row = raw[i];
-                if (!row || !row[colMap.nombre]) continue;
+                // Validar que la fila tenga contenido en la columna de nombre
+                if (!row || colMap.nombre === -1 || !row[colMap.nombre]) continue;
+
+                const procNombre = row[colMap.nombre].toString().trim();
+                if (!procNombre) continue;
+
                 results.push({
-                    id: Date.now() + results.length,
-                    nombre: row[colMap.nombre].toString().trim(),
+                    id: Date.now() + results.length + Math.floor(Math.random() * 1000),
+                    nombre: procNombre,
                     sistema: sistema,
                     subsistema: colMap.subsistema !== -1 ? (row[colMap.subsistema] || '').toString().trim() : '',
                     areaLider: colMap.area !== -1 ? (row[colMap.area] || '').toString().trim() : '',
                     gestorFuncional: colMap.gestor !== -1 ? (row[colMap.gestor] || '').toString().trim() : '',
-                    estado: colMap.estado !== -1 ? (row[colMap.estado] || 'Pendiente').toString().trim() : 'Pendiente'
+                    estado: colMap.estado !== -1 ? (row[colMap.estado] || 'Pendiente').toString().trim() : 'Pendiente',
+                    proceso: colMap.proceso !== -1 ? (row[colMap.proceso] || '').toString().trim() : '',
+                    numero: colMap.numero !== -1 ? (row[colMap.numero] || '').toString().trim() : ''
                 });
             }
+
+            console.log(`Importación finalizada: ${results.length} registros encontrados.`);
             callback(null, results);
-        } catch (err) { callback(err, null); }
+        } catch (err) {
+            console.error("Error en importFromExcel:", err);
+            callback(err, null);
+        }
     };
+    reader.onerror = (err) => callback(err, null);
     reader.readAsArrayBuffer(file);
 }
 
