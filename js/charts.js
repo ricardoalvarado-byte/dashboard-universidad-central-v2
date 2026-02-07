@@ -211,7 +211,8 @@ function initBarChart(stats, rawData) {
                     legend: { display: false },
                     tooltip: {
                         mode: 'index',
-                        intersect: false,
+                        axis: 'y', // Asegurar orientación horizontal
+                        intersect: true, // Solo mostrar si toca estrictamente la barra
                         backgroundColor: 'rgba(15, 23, 42, 0.95)',
                         titleColor: '#f8fafc',
                         callbacks: {
