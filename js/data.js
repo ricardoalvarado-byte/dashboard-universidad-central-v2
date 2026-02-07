@@ -179,7 +179,7 @@ function loadFromLocalStorage() {
 }
 
 // Importación desde Excel mejorada
-// Importación desde Excel mejorada y estricta
+// Importación desde Excel ajustada y flexible
 function importFromExcel(file, sistema, callback) {
     if (!file) {
         callback(new Error('No se seleccionó ningún archivo.'), null);
@@ -202,98 +202,106 @@ function importFromExcel(file, sistema, callback) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
 
-            // Buscar hoja válida
-            let sheet = workbook.Sheets[workbook.SheetNames[0]]; // Por defecto la primera
-            // Intentar buscar hoja que tenga datos si la primera parece vacía
+            // Buscar la hoja más probable (la que tenga más datos)
+            let sheet = workbook.Sheets[workbook.SheetNames[0]];
+            let maxRows = 0;
+
             for (const name of workbook.SheetNames) {
                 const s = workbook.Sheets[name];
                 if (s['!ref']) {
                     const range = XLSX.utils.decode_range(s['!ref']);
-                    if (range.e.r > 5) { // Si tiene más de 5 filas, es candidata
+                    const rows = range.e.r - range.s.r;
+                    if (rows > maxRows) {
+                        maxRows = rows;
                         sheet = s;
+                    }
+                }
+            }
+
+            const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+            if (!raw || raw.length === 0) throw new Error("Archivo vacío.");
+
+            // 1. Encontrar la FILA DE ENCABEZADOS
+            let headerRowIndex = -1;
+
+            // Palabras clave para identificar la cabecera (flexible)
+            const keywords = ['NOMBRE', 'PROCEDIMIENTO', 'SISTEMA', 'SUBSISTEMA', 'ESTADO', 'PROCESO'];
+
+            for (let i = 0; i < Math.min(20, raw.length); i++) {
+                const rowStr = raw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
+
+                // Contar cuántas palabras clave aparecen en la fila
+                let matches = 0;
+                keywords.forEach(k => { if (rowStr.includes(k)) matches++; });
+
+                // Si encontramos al menos 2 palabras clave, asumimos que es la cabecera
+                if (matches >= 2) {
+                    headerRowIndex = i;
+                    console.log(`Cabecera encontrada en fila ${i}:`, raw[i]);
+                    break;
+                }
+            }
+
+            // Si no encuentra cabecera, intenta usar la primera fila que no esté vacía
+            if (headerRowIndex === -1) {
+                console.warn("No se detectó cabecera clara, buscando primera fila con datos...");
+                for (let i = 0; i < Math.min(10, raw.length); i++) {
+                    if (raw[i].join('').trim().length > 10) {
+                        headerRowIndex = i;
                         break;
                     }
                 }
             }
 
-            // Convertir a matriz de datos (array de arrays)
-            const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            if (headerRowIndex === -1) headerRowIndex = 0;
 
-            if (!raw || raw.length === 0) throw new Error("Archivo vacío.");
+            const headers = raw[headerRowIndex].map(h => h ? h.toString().toUpperCase().trim().replace(/\s+/g, ' ') : '');
 
-            // 1. Encontrar la FILA DE ENCABEZADOS exacta
-            // Buscamos una fila que contenga al menos 3 de nuestras columnas clave
-            let headerRowIndex = -1;
-            const requiredHeaders = ['SISTEMA', 'SUBSISTEMA', 'PROCESO', 'NOMBRE PROCEDIMIENTO', 'ESTADO GENERAL'];
+            // Función auxiliar para buscar índice de columna
+            const findCol = (terms) => headers.findIndex(h => terms.some(t => h.includes(t)));
 
-            for (let i = 0; i < Math.min(20, raw.length); i++) {
-                const rowStr = raw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
-                let matches = 0;
-                requiredHeaders.forEach(h => { if (rowStr.includes(h)) matches++; });
-
-                if (matches >= 2) { // Si encuentra al menos 2 columnas clave, es la cabecera
-                    headerRowIndex = i;
-                    break;
-                }
-            }
-
-            if (headerRowIndex === -1) {
-                // Si no encuentra cabecera clara, asume fila 0 pero advierte
-                console.warn("No se detectó fila de cabecera clara, usando fila 0");
-                headerRowIndex = 0;
-            }
-
-            const headers = raw[headerRowIndex].map(h => h ? h.toString().toUpperCase().trim() : '');
-            console.log("Cabeceras encontradas:", headers);
-
-            // 2. Mapear Índices de Columnas
+            // 2. Mapear columnas (Búsqueda "fuzzy")
             const colMap = {
-                sistema: headers.indexOf('SISTEMA'),
-                subsistema: headers.indexOf('SUBSISTEMA'),
-                proceso: headers.indexOf('PROCESO'),
-                gestorFuncional: -1, // Se busca abajo
-                gestorOperativo: -1, // Se busca abajo
-                areaLider: -1, // Se busca abajo
-                numero: -1,
-                tipo: headers.indexOf('TIPO'),
-                nombre: -1, // Crítico
-                seguimiento: headers.indexOf('SEGUIMIENTO'),
-                responsableCp: -1,
-                estado: -1
+                sistema: findCol(['SISTEMA']),
+                subsistema: findCol(['SUBSISTEMA']),
+                proceso: findCol(['PROCESO']),
+                gestorFuncional: findCol(['GESTOR FUNCIONAL', 'GESTOR PROCESO']),
+                gestorOperativo: findCol(['GESTOR OPERATIVO']),
+                areaLider: findCol(['AREA LIDER', 'ÁREA LÍDER', 'AREA', 'LIDER']),
+                numero: findCol(['N°', 'NUMERO', 'NO.']),
+                tipo: findCol(['TIPO']),
+                nombre: findCol(['NOMBRE PROCEDIMIENTO', 'NOMBRE', 'PROCEDIMIENTO']),
+                seguimiento: findCol(['SEGUIMIENTO', 'REVISION']),
+                responsableCp: findCol(['RESPONSABLE CP', 'RESPONSABLE']),
+                estado: findCol(['ESTADO GENERAL', 'ESTADO'])
             };
 
-            // Búsqueda flexible para columnas con nombres variados
-            headers.forEach((h, idx) => {
-                if (h === 'GESTOR FUNCIONAL PROCESO' || h === 'GESTOR FUNCIONAL') colMap.gestorFuncional = idx;
-                if (h === 'GESTOR OPERATIVO PROCESO' || h === 'GESTOR OPERATIVO') colMap.gestorOperativo = idx;
-                if (h === 'AREA LÍDER' || h === 'ÁREA LÍDER' || h === 'AREA LIDER') colMap.areaLider = idx;
-                if (h === 'N°' || h === 'NUMERO' || h === 'NO.') colMap.numero = idx;
-                if (h === 'NOMBRE PROCEDIMIENTO' || h === 'NOMBRE DEL PROCEDIMIENTO') colMap.nombre = idx;
-                if (h === 'RESPONSABLE CP' || h === 'RESPONSABLE') colMap.responsableCp = idx;
-                if (h === 'ESTADO GENERAL' || h === 'ESTADO') colMap.estado = idx;
-            });
+            console.log("Mapa de columnas detectado:", colMap);
 
-            console.log("Mapa de columnas:", colMap);
+            // Validar si encontramos al menos la columna NOMBRE o SISTEMA
+            if (colMap.nombre === -1 && colMap.sistema === -1) {
+                throw new Error("No se pudieron identificar las columnas principales (Nombre o Sistema).");
+            }
 
-            // 3. Procesar Filas (Filtrado estricto)
+            // 3. Procesar Filas
             const results = [];
 
             for (let i = headerRowIndex + 1; i < raw.length; i++) {
                 const row = raw[i];
                 if (!row) continue;
 
-                // Obtener datos usando el mapa
                 const getVal = (idx) => (idx !== -1 && row[idx]) ? row[idx].toString().trim() : '';
 
                 const nombre = getVal(colMap.nombre);
-                const sistemaVal = getVal(colMap.sistema) || sistema; // Usa el del excel o el pasado por parámetro
+                const sistemaVal = getVal(colMap.sistema) || sistema; // Prioridad al Excel, fallback al seleccionado
 
-                // CRITERIO DE EXCLUSIÓN: 
-                // Si no tiene "Nombre Procedimiento" Y no tiene "Sistema", es basura/fila vacía.
-                if (!nombre && !getVal(colMap.sistema)) continue;
-
-                // Si dice "Total" o parece un pie de página, ignorar
-                if (nombre.toUpperCase().includes('TOTAL') || sistemaVal.toUpperCase().includes('TOTAL')) continue;
+                // CRITERIO DE VALIDEZ MENOS ESTRICTO:
+                // Debe tener un Nombre Y (un Sistema O un Estado)
+                // Ojo: si nombre está vacío pero hay sistema, podría ser basura.
+                // Si nombre tiene "Total", es basura.
+                if (!nombre || nombre.length < 3) continue;
+                if (nombre.toUpperCase().includes('TOTAL')) continue;
 
                 results.push({
                     id: Date.now() + results.length + Math.floor(Math.random() * 10000),
@@ -312,11 +320,17 @@ function importFromExcel(file, sistema, callback) {
                 });
             }
 
-            console.log(`Importación finalizada: ${results.length} registros válidos.`);
+            console.log(`Importación completada: ${results.length} registros válidos.`);
+
+            if (results.length === 0) {
+                // Si no hay resultados pero el archivo no estaba vacío, algo falló en el mapeo
+                throw new Error("Se leyó el archivo pero no se extrajeron datos validos. Revisa las columnas.");
+            }
+
             callback(null, results);
 
         } catch (err) {
-            console.error("Error crítico procesando Excel:", err);
+            console.error("Error procesando Excel:", err);
             callback(err, null);
         }
     };
