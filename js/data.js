@@ -532,24 +532,47 @@ function filterProcedimientos(filters) {
     });
 }
 
+// Helper para normalizar nombres de estados
+const normalizeEstado = (text) => {
+    if (!text) return '';
+    return text.toString()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+};
+
+// Crear mapa global de estados normalizados para búsquedas rápidas
+const ESTADO_MAP_NORMALIZED = {};
+Object.keys(ESTADOS).forEach(nombreReal => {
+    ESTADO_MAP_NORMALIZED[normalizeEstado(nombreReal)] = nombreReal;
+});
+
 function getEstadoInfo(estadoNombre) {
-    if (!estadoNombre) return ESTADOS['Pendiente'] || { color: '#6B7280', porcentaje: 0, descripcion: 'Procedimiento no iniciado' };
+    if (!estadoNombre) return ESTADOS['Pendiente'];
 
-    // Buscar estado exacto primero
-    const estadoExacto = ESTADOS[estadoNombre];
-    if (estadoExacto) return estadoExacto;
+    // 1. Intento exacto
+    if (ESTADOS[estadoNombre]) return ESTADOS[estadoNombre];
 
-    // Buscar por propiedad nombre
+    // 2. Intento normalizado exacto (El más robusto)
+    const normInput = normalizeEstado(estadoNombre);
+    const nombreReal = ESTADO_MAP_NORMALIZED[normInput];
+    if (nombreReal) return ESTADOS[nombreReal];
+
+    // 3. Búsqueda por propiedad .nombre inyectada
     const estadoPorNombre = Object.values(ESTADOS).find(e => e.nombre === estadoNombre);
     if (estadoPorNombre) return estadoPorNombre;
 
-    // Buscar por coincidencia parcial
-    const estadoParcial = Object.entries(ESTADOS).find(([key]) =>
-        key.toLowerCase().includes(estadoNombre.toLowerCase()) ||
-        estadoNombre.toLowerCase().includes(key.toLowerCase())
-    );
+    // 4. Coincidencia parcial (Último recurso, con seguridad)
+    // Ordenamos por longitud descendente para evitar que "Pendiente" atrape a "Pendiente Ajustes"
+    const parcial = Object.keys(ESTADOS)
+        .sort((a, b) => b.length - a.length)
+        .find(key => {
+            const keyNorm = normalizeEstado(key);
+            return normInput.includes(keyNorm) || keyNorm.includes(normInput);
+        });
 
-    return estadoParcial ? estadoParcial[1] : ESTADOS['Pendiente'];
+    return parcial ? ESTADOS[parcial] : ESTADOS['Pendiente'];
 }
 
 function getSubsistemas() {
@@ -580,12 +603,7 @@ function getAreasLider() {
 
 function calculateStats(data) {
     if (!data || !Array.isArray(data)) {
-        return {
-            total: 0,
-            porEstado: {},
-            porSistema: {},
-            porArea: {}
-        };
+        return { total: 0, porEstado: {}, porSistema: {}, porArea: {} };
     }
 
     const stats = {
@@ -596,31 +614,16 @@ function calculateStats(data) {
     };
 
     // Inicializar contadores por estado canónico
-    // Convertimos ESTADOS a un mapa de búsqueda normalizado
-    const estadoMap = {};
     Object.keys(ESTADOS).forEach(nombreEstado => {
         stats.porEstado[nombreEstado] = 0;
-
-        // Crear clave normalizada (sin tildes, minúsculas) -> Nombre Real
-        const key = nombreEstado.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-        estadoMap[key] = nombreEstado;
     });
 
     // Contar por sistema y área
     data.forEach(proc => {
-        // Por estado (con normalización)
-        if (proc.estado) {
-            const estadoNorm = proc.estado.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            const estadoReal = estadoMap[estadoNorm];
-
-            if (estadoReal) {
-                stats.porEstado[estadoReal]++;
-            } else {
-                // Si no coincide con ninguno conocido, lo guardamos tal cual (para debug)
-                // Opcional: podrías asignarlo a 'Pendiente' o similar si prefieres
-                stats.porEstado[proc.estado] = (stats.porEstado[proc.estado] || 0) + 1;
-            }
-        }
+        // Por estado (Usando nuestra función robusta)
+        const estadoInfo = getEstadoInfo(proc.estado);
+        const nombreEstado = estadoInfo.nombre || 'Pendiente';
+        stats.porEstado[nombreEstado] = (stats.porEstado[nombreEstado] || 0) + 1;
 
         // Por sistema
         if (proc.sistema) {

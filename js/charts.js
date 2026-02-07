@@ -155,8 +155,8 @@ function initBarChart(stats, rawData) {
         if (!areaStateMap[area]) areaStateMap[area] = {};
         if (!areaTotals[area]) areaTotals[area] = 0;
 
-        const estadoKey = p.estado || 'Pendiente';
-        const finalEstado = ESTADOS[estadoKey] ? estadoKey : 'Pendiente';
+        const estadoInfo = getEstadoInfo(p.estado);
+        const finalEstado = estadoInfo.nombre || 'Pendiente';
 
         areaStateMap[area][finalEstado] = (areaStateMap[area][finalEstado] || 0) + 1;
         areaTotals[area]++;
