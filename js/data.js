@@ -179,7 +179,7 @@ function loadFromLocalStorage() {
 }
 
 // Importación desde Excel mejorada
-// Importación desde Excel ajustada y flexible
+// Importación desde Excel robusta (Fuerza Bruta Inteligente)
 function importFromExcel(file, sistema, callback) {
     if (!file) {
         callback(new Error('No se seleccionó ningún archivo.'), null);
@@ -222,53 +222,67 @@ function importFromExcel(file, sistema, callback) {
 
             if (!raw || raw.length === 0) throw new Error("Archivo vacío.");
 
-            // 1. Encontrar la FILA DE ENCABEZADOS
+            // 1. ESTRATEGIA DE DETECCIÓN DE CABECERAS (FUERZA BRUTA INTELIGENTE)
             let headerRowIndex = -1;
 
-            // Palabras clave para identificar la cabecera (flexible)
-            const keywords = ['NOMBRE', 'PROCEDIMIENTO', 'SISTEMA', 'SUBSISTEMA', 'ESTADO', 'PROCESO'];
+            // Nivel 1: Búsqueda por coincidencia múltiple (ideal)
+            const keywords = ['NOMBRE', 'PROCEDIMIENTO', 'SISTEMA', 'SUBSISTEMA', 'ESTADO', 'PROCESO', 'GESTOR', 'AREA'];
 
-            for (let i = 0; i < Math.min(20, raw.length); i++) {
+            for (let i = 0; i < Math.min(50, raw.length); i++) {
                 const rowStr = raw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
-
-                // Contar cuántas palabras clave aparecen en la fila
                 let matches = 0;
                 keywords.forEach(k => { if (rowStr.includes(k)) matches++; });
 
-                // Si encontramos al menos 2 palabras clave, asumimos que es la cabecera
-                if (matches >= 2) {
+                if (matches >= 3) { // Si encuentra 3 o más coincidencias, es muy probable que sea la cabecera
                     headerRowIndex = i;
-                    console.log(`Cabecera encontrada en fila ${i}:`, raw[i]);
+                    console.log(`[Data] Cabecera detectada (Nivel 1) en fila ${i}:`, raw[i]);
                     break;
                 }
             }
 
-            // Si no encuentra cabecera, intenta usar la primera fila que no esté vacía
+            // Nivel 2: Búsqueda específica de columnas críticas (si falla Nivel 1)
             if (headerRowIndex === -1) {
-                console.warn("No se detectó cabecera clara, buscando primera fila con datos...");
-                for (let i = 0; i < Math.min(10, raw.length); i++) {
-                    if (raw[i].join('').trim().length > 10) {
+                for (let i = 0; i < Math.min(50, raw.length); i++) {
+                    const rowStr = raw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
+                    if ((rowStr.includes('NOMBRE') || rowStr.includes('PROCEDIMIENTO')) && (rowStr.includes('ESTADO') || rowStr.includes('SISTEMA'))) {
                         headerRowIndex = i;
+                        console.log(`[Data] Cabecera detectada (Nivel 2) en fila ${i}:`, raw[i]);
                         break;
                     }
                 }
             }
 
-            if (headerRowIndex === -1) headerRowIndex = 0;
+            // Nivel 3: Fallback (buscar cualquier fila con "NOMBRE PROCEDIMIENTO")
+            if (headerRowIndex === -1) {
+                for (let i = 0; i < Math.min(50, raw.length); i++) {
+                    const rowStr = raw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
+                    if (rowStr.includes('NOMBRE PROCEDIMIENTO') || rowStr.includes('NOMBRE DEL PROCEDIMIENTO')) {
+                        headerRowIndex = i;
+                        console.log(`[Data] Cabecera detectada (Nivel 3) en fila ${i}:`, raw[i]);
+                        break;
+                    }
+                }
+            }
 
-            const headers = raw[headerRowIndex].map(h => h ? h.toString().toUpperCase().trim().replace(/\s+/g, ' ') : '');
+            if (headerRowIndex === -1) {
+                console.warn("[Data] No se detectó cabecera. Usando fila 0 como fallback.");
+                headerRowIndex = 0;
+            }
 
-            // Función auxiliar para buscar índice de columna
+            // Normalizar headers para facilitar búsqueda
+            const headers = raw[headerRowIndex].map(h => h ? h.toString().toUpperCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '');
+
+            // Función auxiliar fuzzy match
             const findCol = (terms) => headers.findIndex(h => terms.some(t => h.includes(t)));
 
-            // 2. Mapear columnas (Búsqueda "fuzzy")
+            // 2. MAPEO DE COLUMNAS (FUZZY MATCH)
             const colMap = {
                 sistema: findCol(['SISTEMA']),
                 subsistema: findCol(['SUBSISTEMA']),
                 proceso: findCol(['PROCESO']),
-                gestorFuncional: findCol(['GESTOR FUNCIONAL', 'GESTOR PROCESO']),
-                gestorOperativo: findCol(['GESTOR OPERATIVO']),
-                areaLider: findCol(['AREA LIDER', 'ÁREA LÍDER', 'AREA', 'LIDER']),
+                gestorFuncional: findCol(['GESTOR FUNCIONAL', 'GESTOR PROCESO', 'FUNCIONAL']),
+                gestorOperativo: findCol(['GESTOR OPERATIVO', 'OPERATIVO']),
+                areaLider: findCol(['AREA LIDER', 'AREA', 'LIDER']),
                 numero: findCol(['N°', 'NUMERO', 'NO.']),
                 tipo: findCol(['TIPO']),
                 nombre: findCol(['NOMBRE PROCEDIMIENTO', 'NOMBRE', 'PROCEDIMIENTO']),
@@ -277,14 +291,13 @@ function importFromExcel(file, sistema, callback) {
                 estado: findCol(['ESTADO GENERAL', 'ESTADO'])
             };
 
-            console.log("Mapa de columnas detectado:", colMap);
+            console.log("[Data] Mapa de columnas:", colMap);
 
-            // Validar si encontramos al menos la columna NOMBRE o SISTEMA
             if (colMap.nombre === -1 && colMap.sistema === -1) {
-                throw new Error("No se pudieron identificar las columnas principales (Nombre o Sistema).");
+                throw new Error("No se pudo identificar la estructura del archivo. Verifica los nombres de las columnas.");
             }
 
-            // 3. Procesar Filas
+            // 3. PROCESAMIENTO Y FILTRADO
             const results = [];
 
             for (let i = headerRowIndex + 1; i < raw.length; i++) {
@@ -294,14 +307,21 @@ function importFromExcel(file, sistema, callback) {
                 const getVal = (idx) => (idx !== -1 && row[idx]) ? row[idx].toString().trim() : '';
 
                 const nombre = getVal(colMap.nombre);
-                const sistemaVal = getVal(colMap.sistema) || sistema; // Prioridad al Excel, fallback al seleccionado
+                const sistemaVal = getVal(colMap.sistema) || sistema;
 
-                // CRITERIO DE VALIDEZ MENOS ESTRICTO:
-                // Debe tener un Nombre Y (un Sistema O un Estado)
-                // Ojo: si nombre está vacío pero hay sistema, podría ser basura.
-                // Si nombre tiene "Total", es basura.
+                // CRITERIO DE VALIDEZ ESTRICTO
+                // 1. Debe tener nombre
                 if (!nombre || nombre.length < 3) continue;
-                if (nombre.toUpperCase().includes('TOTAL')) continue;
+
+                // 2. No debe ser fila de totales o basura
+                const nombreUpper = nombre.toUpperCase();
+                if (nombreUpper.includes('TOTAL') || nombreUpper.includes('RESUMEN')) continue;
+
+                // 3. Si tiene menos de 2 caracteres en sistema y no se pasó como argumento, sospechoso
+                if (!sistemaVal || sistemaVal.length < 2) {
+                    // Si tampoco tiene estado, es basura casi seguro
+                    if (!getVal(colMap.estado)) continue;
+                }
 
                 results.push({
                     id: Date.now() + results.length + Math.floor(Math.random() * 10000),
@@ -320,21 +340,20 @@ function importFromExcel(file, sistema, callback) {
                 });
             }
 
-            console.log(`Importación completada: ${results.length} registros válidos.`);
+            console.log(`[Data] Registros válidos extraídos: ${results.length}`);
 
             if (results.length === 0) {
-                // Si no hay resultados pero el archivo no estaba vacío, algo falló en el mapeo
-                throw new Error("Se leyó el archivo pero no se extrajeron datos validos. Revisa las columnas.");
+                throw new Error("El archivo no contiene procedimientos válidos o no se reconocieron las columnas.");
             }
 
             callback(null, results);
 
         } catch (err) {
-            console.error("Error procesando Excel:", err);
+            console.error("[Data] Error crítico procesando Excel:", err);
             callback(err, null);
         }
     };
-    reader.onerror = () => callback(new Error('Error de lectura'), null);
+    reader.onerror = () => callback(new Error('Error de lectura del archivo'), null);
     reader.readAsArrayBuffer(file);
 }
 
