@@ -193,7 +193,14 @@ function switchTab(tabName) {
 
 // Función para inicializar cargadores múltiples por sistema
 function initMultiSystemUpload() {
+    console.log("[Admin] Inicializando sistema de carga por sistema...");
+    
     const uploadCards = document.querySelectorAll('.system-upload-card');
+    if (uploadCards.length === 0) {
+        console.warn("[Admin] No se encontraron tarjetas de upload. El DOM podría no estar listo.");
+        setTimeout(initMultiSystemUpload, 500); // Reintentar
+        return;
+    }
 
     uploadCards.forEach(card => {
         const uploadArea = card.querySelector('.upload-area');
@@ -261,11 +268,11 @@ function initMultiSystemUpload() {
 
                 // Eliminar datos anteriores de este sistema (normalizar cadenas para comparación segura)
                 const sistemaNormalizado = sistema.trim().toLowerCase();
-                procedimientos = procedimientos.filter(p => (p.sistema || '').trim().toLowerCase() !== sistemaNormalizado);
+                window.procedimientos = (window.procedimientos || []).filter(p => (p.sistema || '').trim().toLowerCase() !== sistemaNormalizado);
 
                 // Agregar nuevos datos
-                procedimientos = procedimientos.concat(pendingData);
-                window.procedimientos = procedimientos; // Sincronizar global
+                window.procedimientos = window.procedimientos.concat(pendingData);
+                procedimientos = window.procedimientos; // Sincronizar local
 
                 // Guardar en Supabase y LocalStorage
                 console.log("[Admin] Sincronizando con la nube...");
@@ -445,9 +452,11 @@ function resetUploadArea(uploadArea, fileInput) {
         <p class="upload-hint">.xlsx, .xls, .csv</p>
     `;
 
-    if (fileInput) {
+    // Validar que fileInput existe y no es null
+    if (fileInput && fileInput.value !== undefined) {
         fileInput.value = '';
     }
+}
 }
 
 // Función para inicializar botón de guardado total
@@ -721,6 +730,7 @@ function saveLastUpdateDate() {
 
 // Inicializar admin al cargar
 document.addEventListener('DOMContentLoaded', () => {
-    initAdmin();
+    console.log('[Admin] DOM cargado, inicializando panel administrativo...');
+    setTimeout(initAdmin, 100); // Pequeña espera para asegurar que todo esté listo
 });
 

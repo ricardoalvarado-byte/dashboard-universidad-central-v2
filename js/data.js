@@ -169,15 +169,25 @@ function loadFromLocalStorage() {
 // Importación desde Excel mejorada
 function importFromExcel(file, sistema, callback) {
     // Validación inicial
-    if (typeof XLSX === 'undefined') {
-        callback(new Error('Librería XLSX no disponible. Por favor, recarga la página.'), null);
-        return;
-    }
-    
     if (!file) {
         callback(new Error('No se seleccionó ningún archivo.'), null);
         return;
     }
+    
+    // Validar librería XLSX con reintento
+    if (typeof XLSX === 'undefined') {
+        console.warn('XLSX no disponible, esperando y reintentando...');
+        setTimeout(() => {
+            if (typeof XLSX !== 'undefined') {
+                importFromExcel(file, sistema, callback);
+            } else {
+                callback(new Error('Librería XLSX no disponible. Por favor, recarga la página.'), null);
+            }
+        }, 500);
+        return;
+    }
+    
+    console.log(`[Data] Procesando archivo: ${file.name} (${file.size} bytes)`);
     
     const reader = new FileReader();
     reader.onload = function (e) {
@@ -252,7 +262,7 @@ function importFromExcel(file, sistema, callback) {
                 if (h === undefined || h === null) return;
                 const hh = h.toString().trim().toUpperCase();
 
-                if (hh.includes('NOMBRE PROCEDIMIENTO') || hh.includes('NOMBRE PROCEDIMIENTO')) colMap.nombre = idx;
+                if (hh.includes('NOMBRE PROCEDIMIENTO')) colMap.nombre = idx;
                 else if (hh === 'NOMBRE' && colMap.nombre === -1) colMap.nombre = idx;
                 else if (hh.includes('SUBSISTEMA')) colMap.subsistema = idx;
                 else if (hh.includes('AREA LÍDER') || hh.includes('AREA LIDER')) colMap.area = idx;
@@ -306,7 +316,10 @@ function importFromExcel(file, sistema, callback) {
             callback(err, null);
         }
     };
-    reader.onerror = (err) => callback(err, null);
+    reader.onerror = function(err) {
+        console.error("Error leyendo archivo:", err);
+        callback(new Error('Error al leer el archivo. Verifica que no esté corrupto.'), null);
+    };
     reader.readAsArrayBuffer(file);
 }
 
