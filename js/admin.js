@@ -123,18 +123,27 @@ function showDashboardView() {
 // Función para manejar login (Restaurado para asegurar acceso total)
 function handleLogin(e) {
     e.preventDefault();
+    console.log("[Admin] Intento de login iniciado");
 
     const usernameInput = document.getElementById('username').value.trim();
     const passwordInput = document.getElementById('password').value;
     const errorDiv = document.getElementById('loginError');
+    
+    console.log("[Admin] Usuario:", usernameInput);
+    console.log("[Admin] Contraseña:", passwordInput ? "***" : "vacía");
 
     // Credenciales esperadas
     const VALID_USER = 'RALVARADOA';
     const VALID_PASS = 'RIKI2026$';
+    
+    console.log("[Admin] Usuario válido:", VALID_USER);
+    console.log("[Admin] Validando usuario:", usernameInput.toUpperCase(), "===?", VALID_USER, "=>", usernameInput.toUpperCase() === VALID_USER);
+    console.log("[Admin] Validando contraseña:", passwordInput, "===?", VALID_PASS, "=>", passwordInput === VALID_PASS);
 
     if (usernameInput.toUpperCase() === VALID_USER && passwordInput === VALID_PASS) {
         isAuthenticated = true;
         sessionStorage.setItem('uc_admin_session', 'true');
+        console.log("[Admin] Autenticación exitosa, mostrando dashboard...");
 
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('adminDashboard').style.display = 'block';
@@ -143,6 +152,7 @@ function handleLogin(e) {
         errorDiv.style.display = 'none';
         console.log("[Admin] Sesión iniciada correctamente.");
     } else {
+        console.log("[Admin] Autenticación fallida");
         errorDiv.textContent = 'Usuario o contraseña incorrectos';
         errorDiv.style.display = 'block';
     }
@@ -163,7 +173,7 @@ function handleLogout() {
 // Función para verificar sesión guardada
 function checkSavedSession() {
     const savedSession = sessionStorage.getItem('uc_admin_session');
-    if (savedSession && savedSession.length > 10) {
+    if (savedSession === 'true') {
         isAuthenticated = true;
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('adminDashboard').style.display = 'block';
