@@ -22,14 +22,15 @@ let COLUMN_CONFIG = [
 ];
 
 // Estados disponibles para los procedimientos
+// Estados disponibles para los procedimientos con semaforización
 const ESTADOS = {
-    'Pendiente': { color: '#6B7280', porcentaje: 0, descripcion: 'Procedimiento no iniciado' },
-    'En Elaboración': { color: '#3B82F6', porcentaje: 20, descripcion: 'En desarrollo' },
-    'En revisión': { color: '#F59E0B', porcentaje: 40, descripcion: 'Revisión interna' },
-    'Pendiente Ajustes': { color: '#8B5CF6', porcentaje: 60, descripcion: 'Requiere correcciones' },
-    'Ajustado': { color: '#10B981', porcentaje: 70, descripcion: 'Correcciones realizadas' },
-    'Aprobado': { color: '#059669', porcentaje: 80, descripcion: 'Aprobado internamente' },
-    'En el sistema': { color: '#059669', porcentaje: 100, descripcion: 'Implementado en sistema' }
+    'Pendiente': { color: '#EF5350', porcentaje: 0, descripcion: 'Procedimiento no iniciado' }, // Rojo
+    'En Elaboración': { color: '#FFA726', porcentaje: 20, descripcion: 'En desarrollo' }, // Naranja
+    'En revisión': { color: '#FFCA28', porcentaje: 40, descripcion: 'Revisión interna' }, // Ámbar
+    'Pendiente Ajustes': { color: '#FFEE58', porcentaje: 60, descripcion: 'Requiere correcciones' }, // Amarillo
+    'Ajustado': { color: '#9CCC65', porcentaje: 70, descripcion: 'Correcciones realizadas' }, // Verde Lima
+    'Aprobado': { color: '#66BB6A', porcentaje: 80, descripcion: 'Aprobado internamente' }, // Verde
+    'En el sistema': { color: '#2E7D32', porcentaje: 100, descripcion: 'Implementado en sistema' } // Verde Oscuro
 };
 
 // Inyectar nombre en cada objeto de estado para evitar errores en otras partes
