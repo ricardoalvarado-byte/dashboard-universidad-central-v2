@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Dashboard de Gestión de Procesos - Universidad Central">
+    <title>Dashboard Universidad Central - Gestión de Procesos</title>
+    <link rel="stylesheet" href="styles/globals.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <h1 class="logo-title">Universidad Central</h1>
+                <p class="logo-subtitle">Sistema de Gestión de Procesos</p>
+            </div>
+            <div class="header-actions">
+                <div id="lastUpdateContainer" class="last-update"
+                    style="display: none; margin-right: 1.5rem; text-align: right;">
+                    <span
+                        style="display: block; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05rem;">Última
+                        actualización</span>
+                    <span id="lastUpdateDate"
+                        style="font-size: 0.85rem; font-weight: 600; color: var(--uc-green-light);"></span>
+                </div>
+                <button id="toggleViewBtn" class="btn-secondary">
+                    <span class="icon">👤</span>
+                    Panel Administrativo
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard View -->
+    <main id="dashboardView" class="dashboard-container">
+        <!-- Top Filters -->
+        <section class="top-filters glass-card">
+            <h2 class="filter-title">Filtrar por Sistema</h2>
+            <div class="filter-chips" id="sistemaFilters">
+                <button class="chip active" data-sistema="all">Todos</button>
+                <button class="chip" data-sistema="Rectoría">Rectoría</button>
+                <button class="chip" data-sistema="Vicerrectoría Administrativa y Financiera">Vicerrectoría
+                    Administrativa y Financiera</button>
+                <button class="chip" data-sistema="Vicerrectoría Académica">Vicerrectoría Académica</button>
+                <button class="chip" data-sistema="Vicerrectoría de Programas">Vicerrectoría de Programas</button>
+            </div>
+        </section>
+
+        <div class="dashboard-layout">
+            <!-- Left Sidebar - Subsistemas Filter -->
+            <aside class="left-sidebar glass-card">
+                <h3 class="sidebar-title">Filtros Adicionales</h3>
+
+                <div class="filter-group">
+                    <label class="filter-label">Subsistema</label>
+                    <select id="subsistemaFilter" class="filter-select">
+                        <option value="all">Todos los subsistemas</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Área Líder</label>
+                    <input type="text" id="areaFilter" class="filter-input" placeholder="Buscar área...">
+                </div>
+
+                <div class="filter-group">
+                    <label class="filter-label">Gestor Funcional</label>
+                    <input type="text" id="gestorFilter" class="filter-input" placeholder="Buscar gestor...">
+                </div>
+
+                <button id="clearFiltersBtn" class="btn-clear">Limpiar Filtros</button>
+
+                <div class="filter-stats">
+                    <p class="stats-text">Mostrando <strong id="filteredCount">0</strong> de <strong
+                            id="totalCount">0</strong> procedimientos</p>
+                </div>
+            </aside>
+
+            <!-- Center Content -->
+            <div class="center-content">
+                <!-- Charts Section -->
+                <section class="charts-section">
+                    <div class="chart-grid">
+                        <!-- KPI Cards -->
+                        <div class="kpi-card glass-card kpi-primary">
+                            <div class="kpi-icon">📊</div>
+                            <div class="kpi-content">
+                                <h3 class="kpi-label">Total Procedimientos</h3>
+                                <p class="kpi-value" id="totalProcedimientosKpi">0</p>
+                                <span class="kpi-trend">Filtrados</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass-card kpi-success">
+                            <div class="kpi-icon">✅</div>
+                            <div class="kpi-content">
+                                <h3 class="kpi-label">Completitud Global</h3>
+                                <p class="kpi-value" id="globalCompletionKpi">0%</p>
+                                <span class="kpi-trend">Promedio ponderado</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass-card kpi-warning">
+                            <div class="kpi-icon">⏳</div>
+                            <div class="kpi-content">
+                                <h3 class="kpi-label">En Gestión</h3>
+                                <p class="kpi-value" id="inProcessKpi">0</p>
+                                <span class="kpi-trend">Activos (No pendientes)</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card glass-card kpi-info">
+                            <div class="kpi-icon">🏆</div>
+                            <div class="kpi-content">
+                                <h3 class="kpi-label">Mejor Área</h3>
+                                <p class="kpi-value" id="topAreaKpi">-</p>
+                                <span class="kpi-trend" id="topAreaValue">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Donut Chart -->
+                        <div class="chart-card glass-card chart-large">
+                            <h3 class="chart-title">Distribución por Estado</h3>
+                            <div class="chart-container">
+                                <canvas id="donutChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Bar Chart -->
+                        <div class="chart-card glass-card chart-large">
+                            <h3 class="chart-title">Avance por Área</h3>
+                            <div class="chart-container large">
+                                <canvas id="barChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Conventions Panel -->
+                <section class="conventions-panel glass-card">
+                    <h3 class="section-title">Convenciones de Estados</h3>
+                    <div class="conventions-grid" id="conventionsGrid">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                </section>
+
+                <!-- Detailed Table -->
+                <section class="table-section glass-card">
+                    <div class="table-header">
+                        <h3 class="section-title">Detalle de Procedimientos</h3>
+                        <div class="table-actions">
+                            <input type="text" id="tableSearch" class="search-input"
+                                placeholder="🔍 Buscar en tabla...">
+                            <button id="exportExcelBtn" class="btn-primary">📥 Exportar Excel</button>
+                            <button id="exportPdfBtn" class="btn-secondary">📄 Exportar PDF</button>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="procedimientosTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="nombre">Nombre del Procedimiento <span class="sort-icon">⇅</span>
+                                    </th>
+                                    <th data-sort="sistema">Sistema <span class="sort-icon">⇅</span></th>
+                                    <th data-sort="subsistema">Subsistema <span class="sort-icon">⇅</span></th>
+                                    <th data-sort="areaLider">Área Líder <span class="sort-icon">⇅</span></th>
+                                    <th data-sort="gestorFuncional">Gestor Funcional <span class="sort-icon">⇅</span>
+                                    </th>
+                                    <th data-sort="estado">Estado <span class="sort-icon">⇅</span></th>
+                                    <th data-sort="porcentaje">% Avance <span class="sort-icon">⇅</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Will be populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="pagination">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Sidebar - Estado Filter -->
+            <aside class="right-sidebar glass-card">
+                <h3 class="sidebar-title">Filtrar por Estado</h3>
+                <div class="estado-filters" id="estadoFilters">
+                    <!-- Will be populated dynamically -->
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Admin Panel View (Hidden by default) -->
+    <main id="adminView" class="admin-container" style="display: none;">
+        <div class="admin-content">
+            <!-- Login Form -->
+            <div id="loginForm" class="login-container">
+                <div class="login-card glass-card">
+                    <h2 class="login-title">Panel Administrativo</h2>
+                    <p class="login-subtitle">Universidad Central</p>
+                    <form id="loginFormElement">
+                        <div class="form-group">
+                            <label for="username" class="form-label">Usuario</label>
+                            <input type="text" id="username" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password" class="form-label">Contraseña</label>
+                            <input type="password" id="password" class="form-input" required>
+                        </div>
+                        <button type="submit" class="btn-primary btn-full">Iniciar Sesión</button>
+                        <div id="loginError" class="error-message" style="display: none;"></div>
+                    </form>
+                    <button id="backToDashboardBtn" class="btn-link">← Volver al Dashboard</button>
+                </div>
+            </div>
+
+            <!-- Admin Dashboard (Hidden until login) -->
+            <div id="adminDashboard" style="display: none;">
+                <div class="admin-header">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <h2 class="admin-title">Panel de Administración</h2>
+                        <button id="viewDashboardBtn" class="btn-secondary"
+                            style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); color: #10b981;">
+                            <span class="icon">👁️</span> Ver Vista de Usuario
+                        </button>
+                    </div>
+                    <div id="vIndicator"
+                        style="background: #ef4444; color: white; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                        VERSION 1.1.3 - SUPABASE</div>
+                    <button id="logoutBtn" class="btn-secondary">Cerrar Sesión</button>
+                </div>
+
+                <div class="admin-tabs">
+                    <button class="tab-btn active" data-tab="import">Importar Datos</button>
+                    <button class="tab-btn" data-tab="manage">Gestionar Procedimientos</button>
+                    <button class="tab-btn" data-tab="config">Configuración</button>
+                </div>
+
+                <!-- Import Tab -->
+                <div id="importTab" class="tab-content active">
+                    <div class="import-header">
+                        <div class="import-header-content">
+                            <div>
+                                <h3 class="import-main-title">Gestión de Datos por Sistema</h3>
+                                <p class="import-subtitle">Carga o elimina datos de forma independiente para cada
+                                    sistema</p>
+                            </div>
+                            <div class="admin-header-actions" style="display: flex; gap: 1rem; align-items: center;">
+                                <button id="saveAllDataBtn" class="btn-primary"
+                                    style="background-color: var(--uc-green-light); color: var(--bg-dark); font-weight: 800; padding: 0.75rem 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                                    <span class="icon">💾</span>
+                                    Guardar Cambios en la Nube
+                                </button>
+                                <button id="deleteAllDataBtn" class="btn-danger">
+                                    <span class="icon">🗑️</span>
+                                    Borrar Todos los Datos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="import-systems-grid">
+                        <!-- Rectoría -->
+                        <div class="glass-card system-upload-card">
+                            <div class="system-card-header">
+                                <h3 class="system-upload-title">📋 Rectoría</h3>
+                                <div class="system-actions">
+                                    <span class="system-count" data-sistema="Rectoría">0 procedimientos</span>
+                                    <button class="btn-delete-system" data-sistema="Rectoría"
+                                        title="Borrar datos de Rectoría">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="upload-area" data-sistema="Rectoría">
+                                <div class="upload-icon">📁</div>
+                                <p class="upload-text">Arrastra archivo Excel de Rectoría</p>
+                                <p class="upload-hint">.xlsx, .xls, .csv</p>
+                                <input type="file" class="file-input" accept=".xlsx,.xls,.csv" style="display: none;">
+                            </div>
+                            <div class="file-preview" style="display: none;">
+                                <h4>Vista Previa</h4>
+                                <div class="preview-table"></div>
+                                <div class="button-group">
+                                    <button class="confirm-import-btn btn-primary">Confirmar</button>
+                                    <button class="cancel-import-btn btn-secondary">Cancelar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vicerrectoría Administrativa y Financiera -->
+                        <div class="glass-card system-upload-card">
+                            <div class="system-card-header">
+                                <h3 class="system-upload-title">💼 Vicerrectoría Administrativa y Financiera</h3>
+                                <div class="system-actions">
+                                    <span class="system-count"
+                                        data-sistema="Vicerrectoría Administrativa y Financiera">0 procedimientos</span>
+                                    <button class="btn-delete-system"
+                                        data-sistema="Vicerrectoría Administrativa y Financiera"
+                                        title="Borrar datos de V. Administrativa">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="upload-area" data-sistema="Vicerrectoría Administrativa y Financiera">
+                                <div class="upload-icon">📁</div>
+                                <p class="upload-text">Arrastra archivo Excel de V. Administrativa</p>
+                                <p class="upload-hint">.xlsx, .xls, .csv</p>
+                                <input type="file" class="file-input" accept=".xlsx,.xls,.csv" style="display: none;">
+                            </div>
+                            <div class="file-preview" style="display: none;">
+                                <h4>Vista Previa</h4>
+                                <div class="preview-table"></div>
+                                <div class="button-group">
+                                    <button class="confirm-import-btn btn-primary">Confirmar</button>
+                                    <button class="cancel-import-btn btn-secondary">Cancelar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vicerrectoría Académica -->
+                        <div class="glass-card system-upload-card">
+                            <div class="system-card-header">
+                                <h3 class="system-upload-title">🎓 Vicerrectoría Académica</h3>
+                                <div class="system-actions">
+                                    <span class="system-count" data-sistema="Vicerrectoría Académica">0
+                                        procedimientos</span>
+                                    <button class="btn-delete-system" data-sistema="Vicerrectoría Académica"
+                                        title="Borrar datos de V. Académica">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="upload-area" data-sistema="Vicerrectoría Académica">
+                                <div class="upload-icon">📁</div>
+                                <p class="upload-text">Arrastra archivo Excel de V. Académica</p>
+                                <p class="upload-hint">.xlsx, .xls, .csv</p>
+                                <input type="file" class="file-input" accept=".xlsx,.xls,.csv" style="display: none;">
+                            </div>
+                            <div class="file-preview" style="display: none;">
+                                <h4>Vista Previa</h4>
+                                <div class="preview-table"></div>
+                                <div class="button-group">
+                                    <button class="confirm-import-btn btn-primary">Confirmar</button>
+                                    <button class="cancel-import-btn btn-secondary">Cancelar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vicerrectoría de Programas -->
+                        <div class="glass-card system-upload-card">
+                            <div class="system-card-header">
+                                <h3 class="system-upload-title">🚀 Vicerrectoría de Programas</h3>
+                                <div class="system-actions">
+                                    <span class="system-count" data-sistema="Vicerrectoría de Programas">0
+                                        procedimientos</span>
+                                    <button class="btn-delete-system" data-sistema="Vicerrectoría de Programas"
+                                        title="Borrar datos de V. Programas">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="upload-area" data-sistema="Vicerrectoría de Programas">
+                                <div class="upload-icon">📁</div>
+                                <p class="upload-text">Arrastra archivo Excel de V. Programas</p>
+                                <p class="upload-hint">.xlsx, .xls, .csv</p>
+                                <input type="file" class="file-input" accept=".xlsx,.xls,.csv" style="display: none;">
+                            </div>
+                            <div class="file-preview" style="display: none;">
+                                <h4>Vista Previa</h4>
+                                <div class="preview-table"></div>
+                                <div class="button-group">
+                                    <button class="confirm-import-btn btn-primary">Confirmar</button>
+                                    <button class="cancel-import-btn btn-secondary">Cancelar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manage Tab -->
+                <div id="manageTab" class="tab-content">
+                    <div class="glass-card">
+                        <h3 class="section-title">Gestión de Procedimientos</h3>
+                        <button id="addProcedimientoBtn" class="btn-primary">+ Agregar Procedimiento</button>
+                        <div id="adminTableContainer"></div>
+                    </div>
+                </div>
+
+                <!-- Config Tab -->
+                <div id="configTab" class="tab-content">
+                    <div class="glass-card">
+                        <h3 class="section-title">Personalización de Columnas</h3>
+                        <p style="margin-bottom: var(--spacing-lg); color: var(--text-secondary);">
+                            Elige qué columnas mostrar en la tabla y personaliza sus nombres según tu Excel.
+                        </p>
+                        <div id="columnsConfig" style="margin-bottom: var(--spacing-2xl);"></div>
+
+                        <div style="border-top: 1px solid var(--glass-border); margin: var(--spacing-xl) 0;"></div>
+
+                        <h3 class="section-title">Configuración de Estados</h3>
+                        <div id="estadosConfig"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/supabase-config.js?v=1.1.0"></script>
+    <script src="js/data.js?v=1.1.0"></script>
+    <script src="js/charts.js?v=1.1.0"></script>
+    <script src="js/filters.js?v=1.1.0"></script>
+    <script src="js/table.js?v=1.1.0"></script>
+    <script src="js/admin.js?v=1.1.0"></script>
+    <script src="js/app.js?v=1.1.0"></script>
+</body>
+
+</html>

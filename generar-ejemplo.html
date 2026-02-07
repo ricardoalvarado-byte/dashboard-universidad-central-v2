@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generar Excel de Ejemplo - Universidad Central</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            background: linear-gradient(135deg, #4ade80, #86efac);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #cbd5e1;
+            margin-bottom: 30px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #2d5f3f, #4ade80);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(74, 222, 128, 0.4);
+        }
+
+        .info {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #86efac;
+        }
+
+        .info h3 {
+            margin-top: 0;
+            color: #4ade80;
+        }
+
+        .info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .info li {
+            margin: 5px 0;
+        }
+
+        .success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎓 Universidad Central</h1>
+        <p class="subtitle">Generador de Archivo Excel de Ejemplo</p>
+
+        <div class="info">
+            <h3>📋 Información</h3>
+            <p>Este archivo te permite generar un Excel de ejemplo con datos de procedimientos que puedes importar en el
+                dashboard.</p>
+            <p><strong>El archivo incluirá:</strong></p>
+            <ul>
+                <li>30 procedimientos de ejemplo</li>
+                <li>Distribuidos en los 4 sistemas principales</li>
+                <li>Con diferentes estados de avance</li>
+                <li>Formato listo para importar</li>
+            </ul>
+        </div>
+
+        <button onclick="generarExcel()">📥 Descargar Excel de Ejemplo</button>
+        <button onclick="abrirDashboard()">🚀 Abrir Dashboard</button>
+
+        <div id="successMessage" class="success">
+            ✅ Archivo descargado correctamente. Ahora puedes importarlo en el panel administrativo del dashboard.
+        </div>
+    </div>
+
+    <script>
+        function generarExcel() {
+            // Datos de ejemplo
+            const datos = [
+                {
+                    'Nombre del Procedimiento': 'Gestión de Recursos Humanos',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'Talento Humano',
+                    'Área Líder': 'Recursos Humanos',
+                    'Gestor Funcional': 'María González',
+                    'Estado': 'En el sistema'
+                },
+                {
+                    'Nombre del Procedimiento': 'Proceso de Admisiones',
+                    'Sistema': 'Vicerrectoría Académica',
+                    'Subsistema': 'Registro y Control',
+                    'Área Líder': 'Admisiones',
+                    'Gestor Funcional': 'Carlos Ramírez',
+                    'Estado': 'Aprobado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión Financiera y Presupuestal',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'Finanzas',
+                    'Área Líder': 'Contabilidad',
+                    'Gestor Funcional': 'Ana Martínez',
+                    'Estado': 'En revisión'
+                },
+                {
+                    'Nombre del Procedimiento': 'Evaluación Docente',
+                    'Sistema': 'Vicerrectoría Académica',
+                    'Subsistema': 'Calidad Académica',
+                    'Área Líder': 'Desarrollo Académico',
+                    'Gestor Funcional': 'Luis Pérez',
+                    'Estado': 'Ajustado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Proyectos de Extensión',
+                    'Sistema': 'Vicerrectoría de Programas',
+                    'Subsistema': 'Extensión Universitaria',
+                    'Área Líder': 'Proyección Social',
+                    'Gestor Funcional': 'Sandra López',
+                    'Estado': 'Pendiente Ajustes'
+                },
+                {
+                    'Nombre del Procedimiento': 'Planeación Estratégica Institucional',
+                    'Sistema': 'Rectoría',
+                    'Subsistema': 'Planeación',
+                    'Área Líder': 'Planeación Institucional',
+                    'Gestor Funcional': 'Roberto Silva',
+                    'Estado': 'En Elaboración'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Compras y Suministros',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'Compras',
+                    'Área Líder': 'Adquisiciones',
+                    'Gestor Funcional': 'Patricia Ruiz',
+                    'Estado': 'En el sistema'
+                },
+                {
+                    'Nombre del Procedimiento': 'Diseño y Actualización Curricular',
+                    'Sistema': 'Vicerrectoría Académica',
+                    'Subsistema': 'Currículo',
+                    'Área Líder': 'Desarrollo Curricular',
+                    'Gestor Funcional': 'Jorge Mendoza',
+                    'Estado': 'Aprobado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Investigación',
+                    'Sistema': 'Vicerrectoría de Programas',
+                    'Subsistema': 'Investigación',
+                    'Área Líder': 'Centro de Investigaciones',
+                    'Gestor Funcional': 'Diana Torres',
+                    'Estado': 'En revisión'
+                },
+                {
+                    'Nombre del Procedimiento': 'Comunicación Institucional',
+                    'Sistema': 'Rectoría',
+                    'Subsistema': 'Comunicaciones',
+                    'Área Líder': 'Comunicaciones',
+                    'Gestor Funcional': 'Miguel Ángel Castro',
+                    'Estado': 'Pendiente'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Infraestructura',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'Infraestructura',
+                    'Área Líder': 'Servicios Generales',
+                    'Gestor Funcional': 'Fernando Vargas',
+                    'Estado': 'En el sistema'
+                },
+                {
+                    'Nombre del Procedimiento': 'Bienestar Estudiantil',
+                    'Sistema': 'Vicerrectoría de Programas',
+                    'Subsistema': 'Bienestar',
+                    'Área Líder': 'Bienestar Universitario',
+                    'Gestor Funcional': 'Claudia Moreno',
+                    'Estado': 'Aprobado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Calidad Institucional',
+                    'Sistema': 'Rectoría',
+                    'Subsistema': 'Calidad',
+                    'Área Líder': 'Aseguramiento de la Calidad',
+                    'Gestor Funcional': 'Alberto Jiménez',
+                    'Estado': 'Ajustado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Tecnología e Información',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'TI',
+                    'Área Líder': 'Tecnología e Información',
+                    'Gestor Funcional': 'Ricardo Sánchez',
+                    'Estado': 'En el sistema'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Graduados',
+                    'Sistema': 'Vicerrectoría Académica',
+                    'Subsistema': 'Egresados',
+                    'Área Líder': 'Relación con Egresados',
+                    'Gestor Funcional': 'Mónica Herrera',
+                    'Estado': 'En Elaboración'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Convenios y Alianzas',
+                    'Sistema': 'Rectoría',
+                    'Subsistema': 'Relaciones Internacionales',
+                    'Área Líder': 'Cooperación Internacional',
+                    'Gestor Funcional': 'Andrés Rojas',
+                    'Estado': 'Aprobado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Nómina',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'Talento Humano',
+                    'Área Líder': 'Nómina',
+                    'Gestor Funcional': 'Laura Gómez',
+                    'Estado': 'En el sistema'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Prácticas Profesionales',
+                    'Sistema': 'Vicerrectoría Académica',
+                    'Subsistema': 'Prácticas',
+                    'Área Líder': 'Prácticas Profesionales',
+                    'Gestor Funcional': 'Sebastián Ortiz',
+                    'Estado': 'En revisión'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Publicaciones',
+                    'Sistema': 'Vicerrectoría de Programas',
+                    'Subsistema': 'Investigación',
+                    'Área Líder': 'Editorial Universitaria',
+                    'Gestor Funcional': 'Valentina Cruz',
+                    'Estado': 'Pendiente Ajustes'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión Documental',
+                    'Sistema': 'Rectoría',
+                    'Subsistema': 'Archivo',
+                    'Área Líder': 'Gestión Documental',
+                    'Gestor Funcional': 'Camilo Díaz',
+                    'Estado': 'Ajustado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Seguridad y Salud en el Trabajo',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'Talento Humano',
+                    'Área Líder': 'Seguridad y Salud',
+                    'Gestor Funcional': 'Natalia Reyes',
+                    'Estado': 'En el sistema'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Laboratorios',
+                    'Sistema': 'Vicerrectoría Académica',
+                    'Subsistema': 'Infraestructura Académica',
+                    'Área Líder': 'Laboratorios',
+                    'Gestor Funcional': 'Daniel Morales',
+                    'Estado': 'Aprobado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Emprendimiento',
+                    'Sistema': 'Vicerrectoría de Programas',
+                    'Subsistema': 'Extensión Universitaria',
+                    'Área Líder': 'Centro de Emprendimiento',
+                    'Gestor Funcional': 'Isabella Ramírez',
+                    'Estado': 'En Elaboración'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión Jurídica',
+                    'Sistema': 'Rectoría',
+                    'Subsistema': 'Jurídica',
+                    'Área Líder': 'Oficina Jurídica',
+                    'Gestor Funcional': 'Alejandro Vargas',
+                    'Estado': 'En revisión'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Inventarios',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'Almacén',
+                    'Área Líder': 'Almacén General',
+                    'Gestor Funcional': 'Gabriela Soto',
+                    'Estado': 'Pendiente Ajustes'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Biblioteca',
+                    'Sistema': 'Vicerrectoría Académica',
+                    'Subsistema': 'Biblioteca',
+                    'Área Líder': 'Biblioteca Central',
+                    'Gestor Funcional': 'Julián Herrera',
+                    'Estado': 'En el sistema'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Responsabilidad Social',
+                    'Sistema': 'Vicerrectoría de Programas',
+                    'Subsistema': 'Extensión Universitaria',
+                    'Área Líder': 'Responsabilidad Social',
+                    'Gestor Funcional': 'Mariana Castro',
+                    'Estado': 'Ajustado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Control Interno',
+                    'Sistema': 'Rectoría',
+                    'Subsistema': 'Control',
+                    'Área Líder': 'Control Interno',
+                    'Gestor Funcional': 'Felipe Mendoza',
+                    'Estado': 'Aprobado'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión Ambiental',
+                    'Sistema': 'Vicerrectoría Administrativa y Financiera',
+                    'Subsistema': 'Infraestructura',
+                    'Área Líder': 'Gestión Ambiental',
+                    'Gestor Funcional': 'Carolina Rojas',
+                    'Estado': 'En revisión'
+                },
+                {
+                    'Nombre del Procedimiento': 'Gestión de Acreditación',
+                    'Sistema': 'Vicerrectoría Académica',
+                    'Subsistema': 'Calidad Académica',
+                    'Área Líder': 'Acreditación',
+                    'Gestor Funcional': 'Esteban Torres',
+                    'Estado': 'Pendiente'
+                }
+            ];
+
+            // Crear libro de trabajo
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(datos);
+
+            // Ajustar ancho de columnas
+            ws['!cols'] = [
+                { wch: 40 }, // Nombre del Procedimiento
+                { wch: 40 }, // Sistema
+                { wch: 25 }, // Subsistema
+                { wch: 25 }, // Área Líder
+                { wch: 20 }, // Gestor Funcional
+                { wch: 20 }  // Estado
+            ];
+
+            // Agregar hoja al libro
+            XLSX.utils.book_append_sheet(wb, ws, 'Procedimientos');
+
+            // Descargar archivo
+            XLSX.writeFile(wb, 'procedimientos_universidad_central_ejemplo.xlsx');
+
+            // Mostrar mensaje de éxito
+            document.getElementById('successMessage').style.display = 'block';
+        }
+
+        function abrirDashboard() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+
+</html>
