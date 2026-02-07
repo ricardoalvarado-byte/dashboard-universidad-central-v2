@@ -129,6 +129,7 @@ if (typeof ChartDataLabels !== 'undefined') {
 }
 
 // Función para inicializar el gráfico de barras (Ahora: Avance por Área)
+// Función para inicializar el gráfico de barras (Ahora: Distribución de Estados por Área - Stacked)
 function initBarChart(stats, rawData) {
     const ctx = document.getElementById('barChart');
     if (!ctx) return;
@@ -137,83 +138,96 @@ function initBarChart(stats, rawData) {
         barChart.destroy();
     }
 
-    // Calcular avance promedio por Área
-    const areasMap = {};
-
-    // Si no hay rawData, retornar (o usar stats si tiene algo, pero preferimos rawData)
     if (!rawData || rawData.length === 0) return;
 
-    rawData.forEach(p => {
-        // Normalizar nombre de área
-        let area = (p.areaLider || 'Sin Asignar').trim();
-        if (area.length > 20) area = area.substring(0, 20) + '...';
+    // 1. Agrupar datos por Área y Estado
+    const areaStateMap = {};
+    const areaTotals = {};
 
-        if (!areasMap[area]) areasMap[area] = { sum: 0, count: 0 };
-        areasMap[area].sum += getEstadoInfo(p.estado).porcentaje;
-        areasMap[area].count++;
+    rawData.forEach(p => {
+        let area = (p.areaLider || 'Sin Asignar').trim();
+        // Acortar nombres largos pero un poco más legibles
+        if (area.length > 30) area = area.substring(0, 30) + '...';
+
+        if (!areaStateMap[area]) areaStateMap[area] = {};
+        if (!areaTotals[area]) areaTotals[area] = 0;
+
+        const estadoKey = p.estado || 'Pendiente';
+        const finalEstado = ESTADOS[estadoKey] ? estadoKey : 'Pendiente';
+
+        areaStateMap[area][finalEstado] = (areaStateMap[area][finalEstado] || 0) + 1;
+        areaTotals[area]++;
     });
 
-    // Convertir a arrays y ordenar por avance
-    let areaEntries = Object.keys(areasMap).map(area => ({
-        label: area,
-        value: Math.round(areasMap[area].sum / areasMap[area].count)
-    }));
+    // 2. Ordenar áreas por volumen total (Descendente)
+    let sortedAreas = Object.keys(areaTotals).sort((a, b) => areaTotals[b] - areaTotals[a]);
+    sortedAreas = sortedAreas.slice(0, 10);
 
-    // Ordenar descendente y tomar Top 10 si son muchas
-    areaEntries.sort((a, b) => b.value - a.value);
-    areaEntries = areaEntries.slice(0, 10);
+    // 3. Crear Datasets (Uno por cada Estado posible en el orden definido en ESTADOS)
+    const estadosKeys = Object.keys(ESTADOS);
 
-    const labels = areaEntries.map(e => e.label);
-    const data = areaEntries.map(e => e.value);
+    const datasets = estadosKeys.map(estadoKey => {
+        const estadoInfo = ESTADOS[estadoKey];
+        const data = sortedAreas.map(area => areaStateMap[area][estadoKey] || 0);
 
-    // Colores dinámicos
-    const colors = data.map(val => getColorByPercentage(val));
+        return {
+            label: estadoKey,
+            data: data,
+            backgroundColor: estadoInfo.color,
+            stack: 'total',
+            barThickness: 20,
+            borderWidth: 0
+        };
+    });
 
-    barChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: '% Avance por Área',
-                data: data,
-                backgroundColor: colors.map(c => c + 'CC'), // Transparencia
-                borderColor: colors,
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            indexAxis: 'y', // Convertir a barras horizontales para leer mejor los nombres
-            plugins: {
-                legend: { display: false },
-                datalabels: {
-                    color: '#ffffff',
-                    anchor: 'center',
-                    align: 'center',
-                    font: { weight: 'bold', size: 12 },
-                    formatter: (value) => value + '%',
-                },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `Avance: ${ctx.parsed.x}%`
-                    }
-                }
+    // 4. Crear Gráfico
+    try {
+        barChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sortedAreas,
+                datasets: datasets
             },
-            scales: {
-                x: {
-                    max: 100,
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { callback: v => v + '%', color: '#94a3b8' }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    y: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0', autoSkip: false, font: { size: 10 } }
+                    }
                 },
-                y: {
-                    grid: { display: false },
-                    ticks: { color: '#e2e8f0', autoSkip: false }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleColor: '#f8fafc',
+                        callbacks: {
+                            footer: (tooltipItems) => {
+                                let sum = 0;
+                                tooltipItems.forEach(function (tooltipItem) {
+                                    sum += tooltipItem.parsed.x;
+                                });
+                                return 'Total: ' + sum;
+                            }
+                        }
+                    },
+                    datalabels: { display: false }
                 }
             }
-        }
-    });
+        });
+    } catch (e) {
+        console.error('[Charts] Error al crear bar chart:', e);
+    }
 }
 
 // Función para obtener color según el porcentaje (Basado en la semaforización de Estados)
