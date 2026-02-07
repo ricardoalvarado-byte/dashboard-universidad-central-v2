@@ -202,20 +202,39 @@ function importFromExcel(file, sistema, callback) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
 
-            // Buscar la hoja más probable (la que tenga más datos)
-            let sheet = workbook.Sheets[workbook.SheetNames[0]];
-            let maxRows = 0;
+            console.log(`[Data] Hojas disponibles en el archivo:`, workbook.SheetNames);
+
+            // BUSCAR LA HOJA CORRECTA (la que tiene las columnas de procedimientos)
+            let sheet = null;
+            let sheetName = null;
+            const targetColumns = ['SISTEMA', 'SUBSISTEMA', 'PROCESO', 'GESTOR FUNCIONAL', 'NOMBRE PROCEDIMIENTO', 'ESTADO GENERAL'];
 
             for (const name of workbook.SheetNames) {
                 const s = workbook.Sheets[name];
-                if (s['!ref']) {
-                    const range = XLSX.utils.decode_range(s['!ref']);
-                    const rows = range.e.r - range.s.r;
-                    if (rows > maxRows) {
-                        maxRows = rows;
+                const testRaw = XLSX.utils.sheet_to_json(s, { header: 1, defval: '', range: 0 });
+
+                // Buscar en las primeras 20 filas si hay una que contenga las columnas objetivo
+                for (let i = 0; i < Math.min(20, testRaw.length); i++) {
+                    const rowStr = testRaw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
+                    let matches = 0;
+                    targetColumns.forEach(col => { if (rowStr.includes(col)) matches++; });
+
+                    if (matches >= 3) {
                         sheet = s;
+                        sheetName = name;
+                        console.log(`[Data] ✅ Hoja correcta encontrada: "${name}" (${matches} columnas coinciden)`);
+                        break;
                     }
                 }
+
+                if (sheet) break;
+            }
+
+            // Si no encuentra hoja con las columnas, usar la primera
+            if (!sheet) {
+                console.warn("[Data] No se encontró hoja con columnas de procedimientos. Usando la primera hoja.");
+                sheet = workbook.Sheets[workbook.SheetNames[0]];
+                sheetName = workbook.SheetNames[0];
             }
 
             const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
