@@ -246,6 +246,7 @@ function importFromExcel(file, sistema, callback) {
             const headers = raw[hIndex] || [];
             const colMap = { 
                 nombre: -1, 
+                sistema: -1,
                 subsistema: -1, 
                 area: -1, 
                 gestor: -1, 
@@ -264,6 +265,7 @@ function importFromExcel(file, sistema, callback) {
 
                 if (hh.includes('NOMBRE PROCEDIMIENTO')) colMap.nombre = idx;
                 else if (hh === 'NOMBRE' && colMap.nombre === -1) colMap.nombre = idx;
+                else if (hh === 'SISTEMA') colMap.sistema = idx;
                 else if (hh.includes('SUBSISTEMA')) colMap.subsistema = idx;
                 else if (hh.includes('AREA LÍDER') || hh.includes('AREA LIDER')) colMap.area = idx;
                 else if (hh.includes('GESTOR FUNCIONAL PROCESO') || hh.includes('GESTOR FUNCIONAL')) colMap.gestor = idx;
@@ -295,7 +297,7 @@ function importFromExcel(file, sistema, callback) {
                 results.push({
                     id: Date.now() + results.length + Math.floor(Math.random() * 1000),
                     nombre: procNombre,
-                    sistema: sistema,
+                    sistema: colMap.sistema !== -1 ? (row[colMap.sistema] || '').toString().trim() : sistema,
                     subsistema: colMap.subsistema !== -1 ? (row[colMap.subsistema] || '').toString().trim() : '',
                     areaLider: colMap.area !== -1 ? (row[colMap.area] || '').toString().trim() : '',
                     gestorFuncional: colMap.gestor !== -1 ? (row[colMap.gestor] || '').toString().trim() : '',
