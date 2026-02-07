@@ -5,19 +5,19 @@
 let procedimientos = [];
 let lastUpdate = null;
 
-// Configuración de columnas para la tabla
+// Configuración de columnas para la tabla (orden según Excel)
 let COLUMN_CONFIG = [
     { key: 'sistema', label: 'SISTEMA', visible: true, editable: false },
     { key: 'subsistema', label: 'SUBSISTEMA', visible: true, editable: true },
     { key: 'proceso', label: 'PROCESO', visible: true, editable: true },
     { key: 'gestorFuncional', label: 'GESTOR FUNCIONAL PROCESO', visible: true, editable: true },
-    { key: 'gestorOperativo', label: 'GESTOR OPERATIVO PROCESO', visible: false, editable: true },
+    { key: 'gestorOperativo', label: 'GESTOR OPERATIVO PROCESO', visible: true, editable: true },
     { key: 'areaLider', label: 'AREA LÍDER', visible: true, editable: true },
     { key: 'numero', label: 'N°', visible: true, editable: true },
-    { key: 'tipo', label: 'TIPO', visible: false, editable: true },
+    { key: 'tipo', label: 'TIPO', visible: true, editable: true },
     { key: 'nombre', label: 'NOMBRE PROCEDIMIENTO', visible: true, editable: true },
     { key: 'seguimiento', label: 'SEGUIMIENTO', visible: true, editable: true },
-    { key: 'responsableCp', label: 'RESPONSABLE CP', visible: false, editable: true },
+    { key: 'responsableCp', label: 'RESPONSABLE CP', visible: true, editable: true },
     { key: 'estado', label: 'ESTADO GENERAL', visible: true, editable: true }
 ];
 
@@ -48,7 +48,7 @@ async function syncWithSupabase() {
 
     try {
         console.log('🔄 Sincronizando con Supabase...');
-        
+
         const { data, error } = await window.supabase
             .from('procedimientos')
             .select('*')
@@ -61,7 +61,7 @@ async function syncWithSupabase() {
 
         if (data && data.length > 0) {
             console.log(`✅ Supabase: ${data.length} registros recuperados`);
-            
+
             // Mapear de snake_case (Supabase) a camelCase (App)
             procedimientos = data.map(p => ({
                 id: p.id,
@@ -79,7 +79,7 @@ async function syncWithSupabase() {
                 responsableCp: p.responsable_cp || '',
                 updatedAt: p.updated_at || p.created_at || null
             }));
-            
+
             lastUpdate = new Date();
             saveToLocalStorage();
             return procedimientos;
@@ -99,38 +99,53 @@ async function syncWithSupabase() {
 
 async function saveToSupabase(dataToSave = procedimientos) {
     if (!window.supabase || window.SUPABASE_KEY === 'TU_ANON_KEY_AQUI') {
+        console.log('⚠️ Supabase no configurado, guardando solo en localStorage');
         return saveToLocalStorage();
     }
 
     try {
+        console.log(`📤 Intentando guardar ${Array.isArray(dataToSave) ? dataToSave.length : 1} registros en Supabase...`);
+
         // Mapear de camelCase (App) a snake_case (Supabase)
         const normalizedData = (Array.isArray(dataToSave) ? dataToSave : [dataToSave]).map(p => ({
             id: p.id,
-            nombre: p.nombre,
-            sistema: p.sistema,
-            subsistema: p.subsistema,
-            area_lider: p.areaLider,
-            gestor_funcional: p.gestorFuncional,
+            nombre: p.nombre || '',
+            sistema: p.sistema || '',
+            subsistema: p.subsistema || '',
+            area_lider: p.areaLider || '',
+            gestor_funcional: p.gestorFuncional || '',
             gestor_operativo: p.gestorOperativo || '',
-            estado: p.estado,
-            proceso: p.proceso,
-            numero: p.numero,
+            estado: p.estado || 'Pendiente',
+            proceso: p.proceso || '',
+            numero: p.numero || '',
             tipo: p.tipo || '',
             seguimiento: p.seguimiento || '',
             responsable_cp: p.responsableCp || ''
         }));
 
-        const { error } = await window.supabase
-            .from('procedimientos')
-            .upsert(normalizedData);
+        console.log('📋 Ejemplo de datos normalizados:', normalizedData[0]);
 
-        if (error) throw error;
+        const { data, error } = await window.supabase
+            .from('procedimientos')
+            .upsert(normalizedData, {
+                onConflict: 'id',
+                ignoreDuplicates: false
+            })
+            .select();
+
+        if (error) {
+            console.error('❌ Error de Supabase:', error);
+            throw error;
+        }
+
+        console.log(`✅ ${normalizedData.length} registros guardados exitosamente en Supabase`);
 
         // También guardar en localStorage como respaldo redundante
         saveToLocalStorage();
         return true;
     } catch (e) {
-        console.error('Error saving to Supabase:', e);
+        console.error('❌ Error crítico al guardar en Supabase:', e);
+        console.error('Detalles del error:', e.message, e.details, e.hint);
         return saveToLocalStorage();
     }
 }
@@ -170,7 +185,7 @@ function importFromExcel(file, sistema, callback) {
         callback(new Error('No se seleccionó ningún archivo.'), null);
         return;
     }
-    
+
     // Validar librería XLSX con reintento
     if (typeof XLSX === 'undefined') {
         console.warn('XLSX no disponible, esperando y reintentando...');
@@ -183,9 +198,9 @@ function importFromExcel(file, sistema, callback) {
         }, 500);
         return;
     }
-    
+
     console.log(`[Data] Procesando archivo: ${file.name} (${file.size} bytes)`);
-    
+
     const reader = new FileReader();
     reader.onload = function (e) {
         try {
@@ -241,15 +256,15 @@ function importFromExcel(file, sistema, callback) {
             if (hIndex === -1) hIndex = 0; // Fallback a la primera fila
 
             const headers = raw[hIndex] || [];
-            const colMap = { 
-                nombre: -1, 
+            const colMap = {
+                nombre: -1,
                 sistema: -1,
-                subsistema: -1, 
-                area: -1, 
-                gestor: -1, 
+                subsistema: -1,
+                area: -1,
+                gestor: -1,
                 gestorOperativo: -1,
-                estado: -1, 
-                proceso: -1, 
+                estado: -1,
+                proceso: -1,
                 numero: -1,
                 tipo: -1,
                 seguimiento: -1,
@@ -301,10 +316,10 @@ function importFromExcel(file, sistema, callback) {
                 const row = raw[i];
                 // Validar que la fila tenga contenido
                 if (!row || !Array.isArray(row)) continue;
-                
+
                 // Si tenemos columna nombre y está vacía, saltar
                 if (colMap.nombre !== -1 && (!row[colMap.nombre] || row[colMap.nombre].toString().trim() === '')) continue;
-                
+
                 // Si no tenemos columna nombre, usar cualquier columna con contenido
                 if (colMap.nombre === -1) {
                     const hasContent = row.some(cell => cell && cell.toString().trim() !== '');
@@ -338,7 +353,7 @@ function importFromExcel(file, sistema, callback) {
             callback(err, null);
         }
     };
-    reader.onerror = function(err) {
+    reader.onerror = function (err) {
         console.error("Error leyendo archivo:", err);
         callback(new Error('Error al leer el archivo. Verifica que no esté corrupto.'), null);
     };
@@ -350,7 +365,7 @@ function importFromExcel(file, sistema, callback) {
 syncWithSupabase().then(() => {
     // Cargar configuración guardada
     loadColumnConfig();
-    
+
     // Al finalizar la carga, disparar evento para que el resto de la app se entere
     window.dispatchEvent(new CustomEvent('dataLoaded'));
 });
@@ -360,33 +375,33 @@ function filterProcedimientos(filters) {
     if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
         return [];
     }
-    
+
     return window.procedimientos.filter(proc => {
         // Filtro por sistema
         if (filters.sistema !== 'all' && proc.sistema !== filters.sistema) {
             return false;
         }
-        
+
         // Filtro por subsistema
         if (filters.subsistema !== 'all' && proc.subsistema !== filters.subsistema) {
             return false;
         }
-        
+
         // Filtro por estado
         if (filters.estado !== 'all' && getEstadoInfo(proc.estado).nombre !== filters.estado) {
             return false;
         }
-        
+
         // Filtro por área líder
         if (filters.areaLider && !proc.areaLider.toLowerCase().includes(filters.areaLider.toLowerCase())) {
             return false;
         }
-        
+
         // Filtro por gestor funcional
         if (filters.gestorFuncional && !proc.gestorFuncional.toLowerCase().includes(filters.gestorFuncional.toLowerCase())) {
             return false;
         }
-        
+
         // Filtro de búsqueda
         if (filters.search) {
             const searchLower = filters.search.toLowerCase();
@@ -395,28 +410,28 @@ function filterProcedimientos(filters) {
                 return false;
             }
         }
-        
+
         return true;
     });
 }
 
 function getEstadoInfo(estadoNombre) {
     if (!estadoNombre) return ESTADOS['Pendiente'] || { color: '#6B7280', porcentaje: 0, descripcion: 'Procedimiento no iniciado' };
-    
+
     // Buscar estado exacto primero
     const estadoExacto = ESTADOS[estadoNombre];
     if (estadoExacto) return estadoExacto;
-    
+
     // Buscar por propiedad nombre
     const estadoPorNombre = Object.values(ESTADOS).find(e => e.nombre === estadoNombre);
     if (estadoPorNombre) return estadoPorNombre;
-    
+
     // Buscar por coincidencia parcial
-    const estadoParcial = Object.entries(ESTADOS).find(([key]) => 
-        key.toLowerCase().includes(estadoNombre.toLowerCase()) || 
+    const estadoParcial = Object.entries(ESTADOS).find(([key]) =>
+        key.toLowerCase().includes(estadoNombre.toLowerCase()) ||
         estadoNombre.toLowerCase().includes(key.toLowerCase())
     );
-    
+
     return estadoParcial ? estadoParcial[1] : ESTADOS['Pendiente'];
 }
 
@@ -424,12 +439,12 @@ function getSubsistemas() {
     if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
         return [];
     }
-    
+
     const subsistemas = [...new Set(window.procedimientos
         .map(p => p.subsistema)
         .filter(s => s && s.trim() !== '')
     )].sort();
-    
+
     return subsistemas;
 }
 
@@ -437,12 +452,12 @@ function getAreasLider() {
     if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
         return [];
     }
-    
+
     const areas = [...new Set(window.procedimientos
         .map(p => p.areaLider)
         .filter(a => a && a.trim() !== '')
     )].sort();
-    
+
     return areas;
 }
 
@@ -455,19 +470,19 @@ function calculateStats(data) {
             porArea: {}
         };
     }
-    
+
     const stats = {
         total: data.length,
         porEstado: {},
         porSistema: {},
         porArea: {}
     };
-    
+
     // Contar por estado
     Object.values(ESTADOS).forEach(estado => {
         stats.porEstado[estado.nombre] = 0;
     });
-    
+
     // Contar por sistema y área
     data.forEach(proc => {
         // Por estado
@@ -476,18 +491,18 @@ function calculateStats(data) {
         } else if (proc.estado) {
             stats.porEstado[proc.estado] = (stats.porEstado[proc.estado] || 0) + 1;
         }
-        
+
         // Por sistema
         if (proc.sistema) {
             stats.porSistema[proc.sistema] = (stats.porSistema[proc.sistema] || 0) + 1;
         }
-        
+
         // Por área
         if (proc.areaLider) {
             stats.porArea[proc.areaLider] = (stats.porArea[proc.areaLider] || 0) + 1;
         }
     });
-    
+
     return stats;
 }
 
@@ -495,12 +510,12 @@ function getGestoresFuncionales() {
     if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
         return [];
     }
-    
+
     const gestores = [...new Set(window.procedimientos
         .map(p => p.gestorFuncional)
         .filter(g => g && g.trim() !== '')
     )].sort();
-    
+
     return gestores;
 }
 
