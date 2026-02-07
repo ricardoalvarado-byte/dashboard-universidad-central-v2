@@ -373,7 +373,7 @@ function importFromExcel(file, sistema, callback) {
 
                     if (sisNorm.includes('rectoria')) {
                         sistemaFinal = 'Rectoría';
-                    } else if (sisNorm.includes('administrativa') || sisNorm.includes('financiera')) {
+                    } else if (sisNorm.includes('administrativa') || sisNorm.includes('financiera') || sisNorm.includes('administrativo') || sisNorm.includes('financiero')) {
                         sistemaFinal = 'Vicerrectoría Administrativa y Financiera';
                     } else if (sisNorm.includes('academica') || sisNorm.includes('academico')) {
                         sistemaFinal = 'Vicerrectoría Académica';
