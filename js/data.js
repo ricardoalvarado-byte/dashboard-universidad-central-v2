@@ -179,27 +179,22 @@ function loadFromLocalStorage() {
 }
 
 // Importación desde Excel mejorada
+// Importación desde Excel mejorada y estricta
 function importFromExcel(file, sistema, callback) {
-    // Validación inicial
     if (!file) {
         callback(new Error('No se seleccionó ningún archivo.'), null);
         return;
     }
 
-    // Validar librería XLSX con reintento
     if (typeof XLSX === 'undefined') {
-        console.warn('XLSX no disponible, esperando y reintentando...');
         setTimeout(() => {
-            if (typeof XLSX !== 'undefined') {
-                importFromExcel(file, sistema, callback);
-            } else {
-                callback(new Error('Librería XLSX no disponible. Por favor, recarga la página.'), null);
-            }
+            if (typeof XLSX !== 'undefined') importFromExcel(file, sistema, callback);
+            else callback(new Error('Librería XLSX no disponible.'), null);
         }, 500);
         return;
     }
 
-    console.log(`[Data] Procesando archivo: ${file.name} (${file.size} bytes)`);
+    console.log(`[Data] Procesando archivo: ${file.name}`);
 
     const reader = new FileReader();
     reader.onload = function (e) {
@@ -207,156 +202,125 @@ function importFromExcel(file, sistema, callback) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
 
-            // Intentar encontrar una hoja con datos, priorizando la primera
-            let sheet = null;
+            // Buscar hoja válida
+            let sheet = workbook.Sheets[workbook.SheetNames[0]]; // Por defecto la primera
+            // Intentar buscar hoja que tenga datos si la primera parece vacía
             for (const name of workbook.SheetNames) {
                 const s = workbook.Sheets[name];
-                const range = XLSX.utils.decode_range(s['!ref'] || 'A1');
-                if (range.e.r > 0) { // Si tiene más de una fila
-                    sheet = s;
-                    break;
+                if (s['!ref']) {
+                    const range = XLSX.utils.decode_range(s['!ref']);
+                    if (range.e.r > 5) { // Si tiene más de 5 filas, es candidata
+                        sheet = s;
+                        break;
+                    }
                 }
             }
 
-            if (!sheet) sheet = workbook.Sheets[workbook.SheetNames[0]];
+            // Convertir a matriz de datos (array de arrays)
             const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
-            if (!raw || raw.length === 0) {
-                throw new Error("El archivo parece estar vacío.");
-            }
+            if (!raw || raw.length === 0) throw new Error("Archivo vacío.");
 
-            // Buscar la mejor fila de cabecera (la que contenga más palabras clave)
-            let hIndex = -1;
-            let maxMatches = -1;
-            const targetKeywords = ['NOMBRE', 'PROCEDIMIENTO', 'ESTADO', 'SISTEMA', 'SUBSISTEMA', 'AREA', 'GESTOR', 'TIPO', 'NUMERO', 'REVISION', 'SEGUIMIENTO', 'FUNCIONAL', 'OPERATIVO', 'LIDER'];
+            // 1. Encontrar la FILA DE ENCABEZADOS exacta
+            // Buscamos una fila que contenga al menos 3 de nuestras columnas clave
+            let headerRowIndex = -1;
+            const requiredHeaders = ['SISTEMA', 'SUBSISTEMA', 'PROCESO', 'NOMBRE PROCEDIMIENTO', 'ESTADO GENERAL'];
 
-            for (let i = 0; i < Math.min(30, raw.length); i++) {
-                const row = raw[i];
-                if (!row || !Array.isArray(row)) continue;
-
+            for (let i = 0; i < Math.min(20, raw.length); i++) {
+                const rowStr = raw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
                 let matches = 0;
-                const rowStr = row.join(' ').toUpperCase();
+                requiredHeaders.forEach(h => { if (rowStr.includes(h)) matches++; });
 
-                // Prioridad absoluta si contiene el nombre exacto de las columnas principales
-                if (rowStr.includes('NOMBRE PROCEDIMIENTO') || rowStr.includes('GESTOR FUNCIONAL PROCESO') || rowStr.includes('AREA LÍDER') || rowStr.includes('ESTADO GENERAL')) {
-                    hIndex = i;
+                if (matches >= 2) { // Si encuentra al menos 2 columnas clave, es la cabecera
+                    headerRowIndex = i;
                     break;
                 }
-
-                targetKeywords.forEach(k => {
-                    if (rowStr.includes(k)) matches++;
-                });
-
-                if (matches > maxMatches && matches >= 2) {
-                    maxMatches = matches;
-                    hIndex = i;
-                }
             }
 
-            if (hIndex === -1) hIndex = 0; // Fallback a la primera fila
+            if (headerRowIndex === -1) {
+                // Si no encuentra cabecera clara, asume fila 0 pero advierte
+                console.warn("No se detectó fila de cabecera clara, usando fila 0");
+                headerRowIndex = 0;
+            }
 
-            const headers = raw[hIndex] || [];
+            const headers = raw[headerRowIndex].map(h => h ? h.toString().toUpperCase().trim() : '');
+            console.log("Cabeceras encontradas:", headers);
+
+            // 2. Mapear Índices de Columnas
             const colMap = {
-                nombre: -1,
-                sistema: -1,
-                subsistema: -1,
-                area: -1,
-                gestor: -1,
-                gestorOperativo: -1,
-                estado: -1,
-                proceso: -1,
+                sistema: headers.indexOf('SISTEMA'),
+                subsistema: headers.indexOf('SUBSISTEMA'),
+                proceso: headers.indexOf('PROCESO'),
+                gestorFuncional: -1, // Se busca abajo
+                gestorOperativo: -1, // Se busca abajo
+                areaLider: -1, // Se busca abajo
                 numero: -1,
-                tipo: -1,
-                seguimiento: -1,
-                responsable: -1
+                tipo: headers.indexOf('TIPO'),
+                nombre: -1, // Crítico
+                seguimiento: headers.indexOf('SEGUIMIENTO'),
+                responsableCp: -1,
+                estado: -1
             };
 
+            // Búsqueda flexible para columnas con nombres variados
             headers.forEach((h, idx) => {
-                if (h === undefined || h === null) return;
-                const hh = h.toString().trim().toUpperCase();
-
-                // Mapeo exacto para los headers del Excel
-                if (hh === 'NOMBRE PROCEDIMIENTO') colMap.nombre = idx;
-                else if (hh.includes('NOMBRE PROCEDIMIENTO') || hh.includes('PROCEDIMIENTOS')) colMap.nombre = idx;
-                else if (hh === 'NOMBRE' && colMap.nombre === -1) colMap.nombre = idx;
-                else if (hh === 'SISTEMA') colMap.sistema = idx;
-                else if (hh === 'SUBSISTEMA') colMap.subsistema = idx;
-                else if (hh.includes('SUBSISTEMA')) colMap.subsistema = idx;
-                else if (hh === 'AREA LÍDER' || hh === 'AREA LIDER') colMap.area = idx;
-                else if (hh.includes('AREA LÍDER') || hh.includes('AREA LIDER') || hh === 'ÁREA' || hh === 'AREA') colMap.area = idx;
-                else if (hh === 'GESTOR FUNCIONAL PROCESO') colMap.gestor = idx;
-                else if (hh.includes('GESTOR FUNCIONAL PROCESO') || hh.includes('GESTOR FUNCIONAL')) colMap.gestor = idx;
-                else if (hh === 'GESTOR OPERATIVO PROCESO') colMap.gestorOperativo = idx;
-                else if (hh.includes('GESTOR OPERATIVO')) colMap.gestorOperativo = idx;
-                else if (hh === 'ESTADO GENERAL') colMap.estado = idx;
-                else if (hh.includes('ESTADO GENERAL') || hh === 'ESTADO') colMap.estado = idx;
-                else if (hh === 'PROCESO') colMap.proceso = idx;
-                else if (hh === 'N°' || hh === 'Nº' || hh === 'NUMERO' || hh === 'N.') colMap.numero = idx;
-                else if (hh === 'TIPO') colMap.tipo = idx;
-                else if (hh === 'SEGUIMIENTO') colMap.seguimiento = idx;
-                else if (hh.includes('SEGUIMIENTO') || hh.includes('REVISIÓN') || hh.includes('REVISION')) colMap.seguimiento = idx;
-                else if (hh === 'RESPONSABLE CP') colMap.responsable = idx;
-                else if (hh.includes('RESPONSABLE CP')) colMap.responsable = idx;
+                if (h === 'GESTOR FUNCIONAL PROCESO' || h === 'GESTOR FUNCIONAL') colMap.gestorFuncional = idx;
+                if (h === 'GESTOR OPERATIVO PROCESO' || h === 'GESTOR OPERATIVO') colMap.gestorOperativo = idx;
+                if (h === 'AREA LÍDER' || h === 'ÁREA LÍDER' || h === 'AREA LIDER') colMap.areaLider = idx;
+                if (h === 'N°' || h === 'NUMERO' || h === 'NO.') colMap.numero = idx;
+                if (h === 'NOMBRE PROCEDIMIENTO' || h === 'NOMBRE DEL PROCEDIMIENTO') colMap.nombre = idx;
+                if (h === 'RESPONSABLE CP' || h === 'RESPONSABLE') colMap.responsableCp = idx;
+                if (h === 'ESTADO GENERAL' || h === 'ESTADO') colMap.estado = idx;
             });
 
-            console.log("Detección de columnas:", colMap);
-            console.log("Headers encontrados:", headers);
+            console.log("Mapa de columnas:", colMap);
 
-            if (colMap.nombre === -1) {
-                // Si no encontramos la columna nombre, intentamos buscar una que se le parezca
-                colMap.nombre = headers.findIndex(h => h && h.toString().toUpperCase().includes('NOMBRE PROCEDIMIENTO'));
-                if (colMap.nombre === -1) {
-                    colMap.nombre = headers.findIndex(h => h && h.toString().toUpperCase().includes('NOMBRE'));
-                }
-            }
-
+            // 3. Procesar Filas (Filtrado estricto)
             const results = [];
-            console.log(`Procesando filas desde la ${hIndex + 1} hasta ${raw.length}`);
-            for (let i = hIndex + 1; i < raw.length; i++) {
+
+            for (let i = headerRowIndex + 1; i < raw.length; i++) {
                 const row = raw[i];
-                // Validar que la fila tenga contenido
-                if (!row || !Array.isArray(row)) continue;
+                if (!row) continue;
 
-                // Si tenemos columna nombre y está vacía, saltar
-                if (colMap.nombre !== -1 && (!row[colMap.nombre] || row[colMap.nombre].toString().trim() === '')) continue;
+                // Obtener datos usando el mapa
+                const getVal = (idx) => (idx !== -1 && row[idx]) ? row[idx].toString().trim() : '';
 
-                // Si no tenemos columna nombre, usar cualquier columna con contenido
-                if (colMap.nombre === -1) {
-                    const hasContent = row.some(cell => cell && cell.toString().trim() !== '');
-                    if (!hasContent) continue;
-                }
+                const nombre = getVal(colMap.nombre);
+                const sistemaVal = getVal(colMap.sistema) || sistema; // Usa el del excel o el pasado por parámetro
 
-                const procNombre = colMap.nombre !== -1 ? row[colMap.nombre].toString().trim() : `Procedimiento ${results.length + 1}`;
-                if (!procNombre) continue;
+                // CRITERIO DE EXCLUSIÓN: 
+                // Si no tiene "Nombre Procedimiento" Y no tiene "Sistema", es basura/fila vacía.
+                if (!nombre && !getVal(colMap.sistema)) continue;
+
+                // Si dice "Total" o parece un pie de página, ignorar
+                if (nombre.toUpperCase().includes('TOTAL') || sistemaVal.toUpperCase().includes('TOTAL')) continue;
 
                 results.push({
-                    id: Date.now() + results.length + Math.floor(Math.random() * 1000),
-                    nombre: procNombre,
-                    sistema: colMap.sistema !== -1 ? (row[colMap.sistema] || '').toString().trim() : sistema,
-                    subsistema: colMap.subsistema !== -1 ? (row[colMap.subsistema] || '').toString().trim() : '',
-                    areaLider: colMap.area !== -1 ? (row[colMap.area] || '').toString().trim() : '',
-                    gestorFuncional: colMap.gestor !== -1 ? (row[colMap.gestor] || '').toString().trim() : '',
-                    gestorOperativo: colMap.gestorOperativo !== -1 ? (row[colMap.gestorOperativo] || '').toString().trim() : '',
-                    estado: colMap.estado !== -1 ? (row[colMap.estado] || 'Pendiente').toString().trim() : 'Pendiente',
-                    proceso: colMap.proceso !== -1 ? (row[colMap.proceso] || '').toString().trim() : '',
-                    numero: colMap.numero !== -1 ? (row[colMap.numero] || '').toString().trim() : '',
-                    tipo: colMap.tipo !== -1 ? (row[colMap.tipo] || '').toString().trim() : '',
-                    seguimiento: colMap.seguimiento !== -1 ? (row[colMap.seguimiento] || '').toString().trim() : '',
-                    responsableCp: colMap.responsable !== -1 ? (row[colMap.responsable] || '').toString().trim() : ''
+                    id: Date.now() + results.length + Math.floor(Math.random() * 10000),
+                    sistema: sistemaVal,
+                    subsistema: getVal(colMap.subsistema),
+                    proceso: getVal(colMap.proceso),
+                    gestorFuncional: getVal(colMap.gestorFuncional),
+                    gestorOperativo: getVal(colMap.gestorOperativo),
+                    areaLider: getVal(colMap.areaLider),
+                    numero: getVal(colMap.numero),
+                    tipo: getVal(colMap.tipo),
+                    nombre: nombre,
+                    seguimiento: getVal(colMap.seguimiento),
+                    responsableCp: getVal(colMap.responsableCp),
+                    estado: getVal(colMap.estado) || 'Pendiente'
                 });
             }
 
-            console.log(`Importación finalizada: ${results.length} registros encontrados.`);
+            console.log(`Importación finalizada: ${results.length} registros válidos.`);
             callback(null, results);
+
         } catch (err) {
-            console.error("Error en importFromExcel:", err);
+            console.error("Error crítico procesando Excel:", err);
             callback(err, null);
         }
     };
-    reader.onerror = function (err) {
-        console.error("Error leyendo archivo:", err);
-        callback(new Error('Error al leer el archivo. Verifica que no esté corrupto.'), null);
-    };
+    reader.onerror = () => callback(new Error('Error de lectura'), null);
     reader.readAsArrayBuffer(file);
 }
 
