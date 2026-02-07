@@ -112,7 +112,7 @@ async function saveToSupabase(dataToSave = procedimientos) {
         console.log(`📤 Intentando guardar ${Array.isArray(dataToSave) ? dataToSave.length : 1} registros en Supabase...`);
 
         // Mapear de camelCase (App) a snake_case (Supabase)
-        const normalizedData = (Array.isArray(dataToSave) ? dataToSave : [dataToSave]).map(p => ({
+        let normalizedData = (Array.isArray(dataToSave) ? dataToSave : [dataToSave]).map(p => ({
             id: p.id,
             nombre: p.nombre || '',
             sistema: p.sistema || '',
@@ -128,7 +128,17 @@ async function saveToSupabase(dataToSave = procedimientos) {
             responsable_cp: p.responsableCp || ''
         }));
 
-        console.log('📋 Ejemplo de datos normalizados:', normalizedData[0]);
+        // CRÍTICO: Eliminar duplicados de ID para evitar error "ON CONFLICT DO UPDATE command cannot affect row a second time"
+        const uniqueIds = new Set();
+        normalizedData = normalizedData.filter(item => {
+            if (uniqueIds.has(item.id)) {
+                return false;
+            }
+            uniqueIds.add(item.id);
+            return true;
+        });
+
+        console.log(`📋 Enviando ${normalizedData.length} registros únicos a Supabase...`);
 
         const { data, error } = await window.supabase
             .from('procedimientos')
