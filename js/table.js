@@ -92,13 +92,22 @@ function renderTable() {
     let sortedData = [...currentTableData];
     if (sortColumn) {
         sortedData.sort((a, b) => {
-            let aVal = a[sortColumn];
-            let bVal = b[sortColumn];
+            // Mapeo de snake_case a camelCase para ordenamiento
+            const keyMap = {
+                'areaLider': 'area_lider',
+                'gestorFuncional': 'gestor_funcional',
+                'gestorOperativo': 'gestor_operativo',
+                'responsableCp': 'responsable_cp'
+            };
+            
+            const dbKey = keyMap[sortColumn] || sortColumn;
+            let aVal = a[dbKey] || a[sortColumn];
+            let bVal = b[dbKey] || b[sortColumn];
 
             // Caso especial para porcentaje (basado en estado)
             if (sortColumn === 'porcentaje') {
-                aVal = getEstadoInfo(a.estado).porcentaje;
-                bVal = getEstadoInfo(b.estado).porcentaje;
+                aVal = getEstadoInfo(a.estado || a.estado_general).porcentaje;
+                bVal = getEstadoInfo(b.estado || b.estado_general).porcentaje;
             }
 
             // Comparación
@@ -140,7 +149,18 @@ function renderTable() {
 
             // Construir celdas dinámicas
             let cellsHTML = visibleColumns.map(col => {
-                let content = proc[col.key] || '';
+                let content = '';
+                
+                // Mapeo de snake_case a camelCase para compatibilidad con Supabase
+                const keyMap = {
+                    'areaLider': 'area_lider',
+                    'gestorFuncional': 'gestor_funcional',
+                    'gestorOperativo': 'gestor_operativo',
+                    'responsableCp': 'responsable_cp'
+                };
+                
+                const dbKey = keyMap[col.key] || col.key;
+                content = proc[dbKey] || proc[col.key] || '';
 
                 // Formato especial para estado
                 if (col.key === 'estado') {

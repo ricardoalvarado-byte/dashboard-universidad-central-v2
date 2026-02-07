@@ -117,10 +117,7 @@ async function saveToSupabase(dataToSave = procedimientos) {
             numero: p.numero,
             tipo: p.tipo || '',
             seguimiento: p.seguimiento || '',
-            responsable_cp: p.responsableCp || '',
-            // Guardar columnas adicionales si existen
-            gestor_funcional_completo: p.gestorFuncionalCompleto || p.gestorFuncional || '',
-            area_lider_completo: p.areaLiderCompleto || p.areaLider || ''
+            responsable_cp: p.responsableCp || ''
         }));
 
         const { error } = await window.supabase
@@ -440,6 +437,51 @@ function getAreasLider() {
     return areas;
 }
 
+function calculateStats(data) {
+    if (!data || !Array.isArray(data)) {
+        return {
+            total: 0,
+            porEstado: {},
+            porSistema: {},
+            porArea: {}
+        };
+    }
+    
+    const stats = {
+        total: data.length,
+        porEstado: {},
+        porSistema: {},
+        porArea: {}
+    };
+    
+    // Contar por estado
+    Object.values(ESTADOS).forEach(estado => {
+        stats.porEstado[estado.nombre] = 0;
+    });
+    
+    // Contar por sistema y área
+    data.forEach(proc => {
+        // Por estado
+        if (proc.estado && stats.porEstado[proc.estado] !== undefined) {
+            stats.porEstado[proc.estado]++;
+        } else if (proc.estado) {
+            stats.porEstado[proc.estado] = (stats.porEstado[proc.estado] || 0) + 1;
+        }
+        
+        // Por sistema
+        if (proc.sistema) {
+            stats.porSistema[proc.sistema] = (stats.porSistema[proc.sistema] || 0) + 1;
+        }
+        
+        // Por área
+        if (proc.areaLider) {
+            stats.porArea[proc.areaLider] = (stats.porArea[proc.areaLider] || 0) + 1;
+        }
+    });
+    
+    return stats;
+}
+
 function getGestoresFuncionales() {
     if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
         return [];
@@ -489,6 +531,7 @@ window.procedimientos = procedimientos;
 window.filterProcedimientos = filterProcedimientos;
 window.getEstadoInfo = getEstadoInfo;
 window.getSubsistemas = getSubsistemas;
+window.calculateStats = calculateStats;
 window.getAreasLider = getAreasLider;
 window.getGestoresFuncionales = getGestoresFuncionales;
 window.loadColumnConfig = loadColumnConfig;
