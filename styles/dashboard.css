@@ -3,7 +3,7 @@
     background: var(--glass-bg);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--glass-border);
-    padding: var(--spacing-lg) var(--spacing-xl);
+    padding: var(--spacing-md) var(--spacing-lg);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -47,14 +47,14 @@
 .dashboard-container {
     max-width: 1920px;
     margin: 0 auto;
-    padding: var(--spacing-xl);
+    padding: var(--spacing-lg);
     animation: fadeIn 0.5s ease-in-out;
 }
 
 /* Top Filters */
 .top-filters {
-    margin-bottom: var(--spacing-lg);
-    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.6), rgba(30, 41, 59, 0.4));
     border-radius: var(--radius-lg);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -85,7 +85,7 @@
 }
 
 .chip {
-    padding: 0.8rem 1.75rem;
+    padding: 0.5rem 1rem;
     /* Optimizado para altura */
     background: rgba(30, 41, 59, 0.7);
     /* Color más sólido y moderno (Slate 800) */
@@ -94,9 +94,8 @@
     border-radius: 12px;
     color: #94a3b8;
     /* Texto muted blue-grey */
-    font-size: 0.95rem;
-    /* Ligeramente menor */
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
@@ -154,8 +153,8 @@
 /* Dashboard Layout */
 .dashboard-layout {
     display: grid;
-    grid-template-columns: 280px 1fr 280px;
-    gap: var(--spacing-xl);
+    grid-template-columns: 240px 1fr 240px;
+    gap: var(--spacing-lg);
 }
 
 /* Sidebars */
@@ -211,7 +210,7 @@
 }
 
 .estado-filter-item {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm);
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
@@ -266,7 +265,7 @@
 
 /* KPI Cards */
 .kpi-card {
-    padding: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -317,7 +316,7 @@
 }
 
 .kpi-value {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1.1;
@@ -348,18 +347,18 @@
 
 .chart-container {
     position: relative;
-    height: 250px;
+    height: 180px;
     /* Reducido para que todo quepa en una pantalla */
 }
 
 .chart-container.large {
-    height: 380px;
+    height: 260px;
     /* Ajustado para 100% zoom */
 }
 
 /* Conventions Panel */
 .conventions-panel {
-    padding: var(--spacing-lg);
+    padding: var(--spacing-md);
 }
 
 .section-title {
