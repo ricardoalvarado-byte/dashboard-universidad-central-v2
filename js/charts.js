@@ -233,23 +233,33 @@ function animateNumber(element, start, end, duration) {
 
 // Función para actualizar todos los gráficos
 function updateCharts(filteredData) {
-    if (typeof calculateStats !== 'function') return;
+    console.log('[Charts] updateCharts llamado con', filteredData ? filteredData.length : 0, 'registros');
 
-    const stats = calculateStats(filteredData);
-
-    // Actualizar gráficos
-    // Nota: PieChart/DonutChart mantiene su lógica original por estado (llamada initDonutChart)
-    // Asumimos initDonutChart sigue existiendo arriba sin cambios o se mantiene
-    if (typeof initDonutChart === 'function') {
-        // Asegurar que donut use datalabels también
-        // Esto requeriría editar initDonutChart también, pero por ahora solo el Bar
-        initDonutChart(stats);
+    if (typeof calculateStats !== 'function') {
+        console.error('[Charts] calculateStats no está definida');
+        return;
     }
 
+    const stats = calculateStats(filteredData);
+    console.log('[Charts] Stats calculadas:', stats);
+
+    // Actualizar gráfico de dona (por estado)
+    if (typeof initDonutChart === 'function') {
+        console.log('[Charts] Inicializando gráfico de dona...');
+        initDonutChart(stats);
+    } else {
+        console.error('[Charts] initDonutChart no está definida');
+    }
+
+    // Actualizar gráfico de barras (por área)
+    console.log('[Charts] Inicializando gráfico de barras...');
     initBarChart(stats, filteredData);
 }
 
+// Exportar función globalmente
+window.updateCharts = updateCharts;
+
 // Inicializar gráficos al cargar
 document.addEventListener('DOMContentLoaded', () => {
-    // La carga inicial la maneja app.js o filters.js
+    console.log('[Charts] DOM cargado, esperando datos...');
 });
