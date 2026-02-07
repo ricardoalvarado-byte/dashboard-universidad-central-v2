@@ -222,6 +222,12 @@ function importFromExcel(file, sistema, callback) {
 
             if (!raw || raw.length === 0) throw new Error("Archivo vacío.");
 
+            // DEBUG: Mostrar las primeras 10 filas para diagnóstico
+            console.log("[Data] DEBUG - Primeras 10 filas del archivo:");
+            for (let i = 0; i < Math.min(10, raw.length); i++) {
+                console.log(`Fila ${i}:`, raw[i]);
+            }
+
             // 1. ESTRATEGIA DE DETECCIÓN DE CABECERAS (FUERZA BRUTA INTELIGENTE)
             let headerRowIndex = -1;
 
@@ -233,6 +239,8 @@ function importFromExcel(file, sistema, callback) {
                 let matches = 0;
                 keywords.forEach(k => { if (rowStr.includes(k)) matches++; });
 
+                console.log(`[Data] Fila ${i} - Coincidencias: ${matches} - Contenido: "${rowStr.substring(0, 100)}..."`);
+
                 if (matches >= 3) { // Si encuentra 3 o más coincidencias, es muy probable que sea la cabecera
                     headerRowIndex = i;
                     console.log(`[Data] Cabecera detectada (Nivel 1) en fila ${i}:`, raw[i]);
@@ -242,6 +250,7 @@ function importFromExcel(file, sistema, callback) {
 
             // Nivel 2: Búsqueda específica de columnas críticas (si falla Nivel 1)
             if (headerRowIndex === -1) {
+                console.log("[Data] Nivel 1 falló, intentando Nivel 2...");
                 for (let i = 0; i < Math.min(50, raw.length); i++) {
                     const rowStr = raw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
                     if ((rowStr.includes('NOMBRE') || rowStr.includes('PROCEDIMIENTO')) && (rowStr.includes('ESTADO') || rowStr.includes('SISTEMA'))) {
@@ -254,6 +263,7 @@ function importFromExcel(file, sistema, callback) {
 
             // Nivel 3: Fallback (buscar cualquier fila con "NOMBRE PROCEDIMIENTO")
             if (headerRowIndex === -1) {
+                console.log("[Data] Nivel 2 falló, intentando Nivel 3...");
                 for (let i = 0; i < Math.min(50, raw.length); i++) {
                     const rowStr = raw[i].map(c => c ? c.toString().toUpperCase().trim() : '').join(' ');
                     if (rowStr.includes('NOMBRE PROCEDIMIENTO') || rowStr.includes('NOMBRE DEL PROCEDIMIENTO')) {
@@ -266,11 +276,13 @@ function importFromExcel(file, sistema, callback) {
 
             if (headerRowIndex === -1) {
                 console.warn("[Data] No se detectó cabecera. Usando fila 0 como fallback.");
+                console.warn("[Data] Fila 0 completa:", raw[0]);
                 headerRowIndex = 0;
             }
 
             // Normalizar headers para facilitar búsqueda
             const headers = raw[headerRowIndex].map(h => h ? h.toString().toUpperCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '');
+            console.log("[Data] Headers normalizados:", headers);
 
             // Función auxiliar fuzzy match
             const findCol = (terms) => headers.findIndex(h => terms.some(t => h.includes(t)));
