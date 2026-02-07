@@ -17,9 +17,14 @@ function initDonutChart(stats) {
     const ctx = document.getElementById('donutChart');
     if (!ctx) return;
 
-    // Destruir gráfico anterior si existe
+    // Destruir gráfico anterior si existe de forma segura
     if (donutChart) {
-        donutChart.destroy();
+        try {
+            donutChart.destroy();
+        } catch (e) {
+            console.warn('[Charts] Error destruyendo donut chart anterior:', e);
+        }
+        donutChart = null;
     }
 
     // Preparar datos
@@ -27,88 +32,95 @@ function initDonutChart(stats) {
     const data = [];
     const colors = [];
 
-    Object.values(ESTADOS).forEach(estado => {
-        const count = stats.porEstado[estado.nombre] || 0;
+    // Usar Object.keys para asegurar que accedemos correctamente a los nombres de estado
+    Object.keys(ESTADOS).forEach(key => {
+        const estado = ESTADOS[key];
+        const count = stats.porEstado[key] || 0; // Usar la clave (nombre) para buscar en stats
+
         if (count > 0) {
-            labels.push(estado.nombre);
+            labels.push(key);
             data.push(count);
             colors.push(estado.color);
         }
     });
 
     // Crear gráfico
-    donutChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors,
-                borderColor: 'rgba(15, 23, 42, 0.8)',
-                borderWidth: 2,
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: '#f8fafc',
-                        padding: 15,
+    try {
+        donutChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderColor: 'rgba(15, 23, 42, 0.8)',
+                    borderWidth: 2,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#f8fafc',
+                            padding: 15,
+                            font: {
+                                size: 12,
+                                family: 'Inter'
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        borderColor: 'rgba(74, 222, 128, 0.3)',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: true,
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    datalabels: {
+                        color: '#000000',
                         font: {
-                            size: 12,
-                            family: 'Inter'
+                            weight: 'bold',
+                            size: 13
                         },
-                        usePointStyle: true,
-                        pointStyle: 'circle'
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                    titleColor: '#f8fafc',
-                    bodyColor: '#cbd5e1',
-                    borderColor: 'rgba(74, 222, 128, 0.3)',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: true,
-                    callbacks: {
-                        label: function (context) {
-                            const label = context.label || '';
-                            const value = context.parsed || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: ${value} (${percentage}%)`;
+                        formatter: (value, ctx) => {
+                            let sum = 0;
+                            let dataArr = ctx.chart.data.datasets[0].data;
+                            dataArr.map(data => {
+                                sum += data;
+                            });
+                            let percentage = (value * 100 / sum).toFixed(0) + "%";
+                            return percentage;
                         }
                     }
                 },
-                datalabels: {
-                    color: '#000000',
-                    font: {
-                        weight: 'bold',
-                        size: 13
-                    },
-                    formatter: (value, ctx) => {
-                        let sum = 0;
-                        let dataArr = ctx.chart.data.datasets[0].data;
-                        dataArr.map(data => {
-                            sum += data;
-                        });
-                        let percentage = (value * 100 / sum).toFixed(0) + "%";
-                        return percentage;
-                    }
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000,
+                    easing: 'easeInOutQuart'
                 }
-            },
-            animation: {
-                animateRotate: true,
-                animateScale: true,
-                duration: 1000,
-                easing: 'easeInOutQuart'
             }
-        }
-    });
+        });
+    } catch (e) {
+        console.error('[Charts] Error creando donut chart:', e);
+    }
 }
 
 // Registrar plugin de etiquetas si está disponible
