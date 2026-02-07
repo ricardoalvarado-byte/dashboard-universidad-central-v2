@@ -14,10 +14,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Escuchar cuando los datos terminen de cargar (desde Supabase o LocalStorage)
     window.addEventListener('dataLoaded', () => {
         console.log('✅ Datos sincronizados. Actualizando UI...');
-        if (typeof updateSubsistemaOptions === 'function') updateSubsistemaOptions();
-        if (typeof applyFilters === 'function') applyFilters();
-        // Mostrar fecha de actualización
-        updateLastUpdateDisplay();
+        
+        // Pequeña espera para asegurar que todas las funciones estén cargadas
+        setTimeout(() => {
+            // Inicializar filtros si no están inicializados
+            if (typeof initFilters === 'function') {
+                initFilters();
+            }
+            
+            // Actualizar opciones de subsistemas
+            if (typeof updateSubsistemaOptions === 'function') {
+                updateSubsistemaOptions();
+            }
+            
+            // Renderizar configuración de columnas
+            if (typeof renderColumnsConfig === 'function') {
+                renderColumnsConfig();
+            }
+            
+            // Aplicar filtros iniciales
+            if (typeof applyFilters === 'function') {
+                applyFilters();
+            }
+            
+            // Mostrar fecha de actualización
+            updateLastUpdateDisplay();
+            
+            console.log('✅ UI completamente actualizada');
+        }, 100);
     });
 });
 

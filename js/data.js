@@ -168,6 +168,17 @@ function loadFromLocalStorage() {
 
 // Importación desde Excel mejorada
 function importFromExcel(file, sistema, callback) {
+    // Validación inicial
+    if (typeof XLSX === 'undefined') {
+        callback(new Error('Librería XLSX no disponible. Por favor, recarga la página.'), null);
+        return;
+    }
+    
+    if (!file) {
+        callback(new Error('No se seleccionó ningún archivo.'), null);
+        return;
+    }
+    
     const reader = new FileReader();
     reader.onload = function (e) {
         try {
@@ -301,13 +312,158 @@ function importFromExcel(file, sistema, callback) {
 
 // Inicialización
 // Prioridad: Supabase > LocalStorage > Default
-fetchFromSupabase().then(() => {
+syncWithSupabase().then(() => {
+    // Cargar configuración guardada
+    loadColumnConfig();
+    
     // Al finalizar la carga, disparar evento para que el resto de la app se entere
     window.dispatchEvent(new CustomEvent('dataLoaded'));
 });
 
+// Funciones esenciales para filtros y personalización
+function filterProcedimientos(filters) {
+    if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
+        return [];
+    }
+    
+    return window.procedimientos.filter(proc => {
+        // Filtro por sistema
+        if (filters.sistema !== 'all' && proc.sistema !== filters.sistema) {
+            return false;
+        }
+        
+        // Filtro por subsistema
+        if (filters.subsistema !== 'all' && proc.subsistema !== filters.subsistema) {
+            return false;
+        }
+        
+        // Filtro por estado
+        if (filters.estado !== 'all' && getEstadoInfo(proc.estado).nombre !== filters.estado) {
+            return false;
+        }
+        
+        // Filtro por área líder
+        if (filters.areaLider && !proc.areaLider.toLowerCase().includes(filters.areaLider.toLowerCase())) {
+            return false;
+        }
+        
+        // Filtro por gestor funcional
+        if (filters.gestorFuncional && !proc.gestorFuncional.toLowerCase().includes(filters.gestorFuncional.toLowerCase())) {
+            return false;
+        }
+        
+        // Filtro de búsqueda
+        if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            const searchableFields = [proc.nombre, proc.subsistema, proc.areaLider, proc.gestorFuncional];
+            if (!searchableFields.some(field => field && field.toLowerCase().includes(searchLower))) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+}
+
+function getEstadoInfo(estadoNombre) {
+    if (!estadoNombre) return ESTADOS['Pendiente'] || { color: '#6B7280', porcentaje: 0, descripcion: 'Procedimiento no iniciado' };
+    
+    // Buscar estado exacto primero
+    const estadoExacto = ESTADOS[estadoNombre];
+    if (estadoExacto) return estadoExacto;
+    
+    // Buscar por propiedad nombre
+    const estadoPorNombre = Object.values(ESTADOS).find(e => e.nombre === estadoNombre);
+    if (estadoPorNombre) return estadoPorNombre;
+    
+    // Buscar por coincidencia parcial
+    const estadoParcial = Object.entries(ESTADOS).find(([key]) => 
+        key.toLowerCase().includes(estadoNombre.toLowerCase()) || 
+        estadoNombre.toLowerCase().includes(key.toLowerCase())
+    );
+    
+    return estadoParcial ? estadoParcial[1] : ESTADOS['Pendiente'];
+}
+
+function getSubsistemas() {
+    if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
+        return [];
+    }
+    
+    const subsistemas = [...new Set(window.procedimientos
+        .map(p => p.subsistema)
+        .filter(s => s && s.trim() !== '')
+    )].sort();
+    
+    return subsistemas;
+}
+
+function getAreasLider() {
+    if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
+        return [];
+    }
+    
+    const areas = [...new Set(window.procedimientos
+        .map(p => p.areaLider)
+        .filter(a => a && a.trim() !== '')
+    )].sort();
+    
+    return areas;
+}
+
+function getGestoresFuncionales() {
+    if (!window.procedimientos || !Array.isArray(window.procedimientos)) {
+        return [];
+    }
+    
+    const gestores = [...new Set(window.procedimientos
+        .map(p => p.gestorFuncional)
+        .filter(g => g && g.trim() !== '')
+    )].sort();
+    
+    return gestores;
+}
+
+function loadColumnConfig() {
+    try {
+        const saved = localStorage.getItem('column_config');
+        if (saved) {
+            const savedConfig = JSON.parse(saved);
+            // Actualizar solo las propiedades existentes
+            COLUMN_CONFIG.forEach((col, index) => {
+                if (savedConfig[index]) {
+                    col.visible = savedConfig[index].visible !== undefined ? savedConfig[index].visible : col.visible;
+                    col.label = savedConfig[index].label || col.label;
+                    col.editable = savedConfig[index].editable !== undefined ? savedConfig[index].editable : col.editable;
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('Error cargando configuración de columnas:', e);
+    }
+}
+
+function saveColumnConfig() {
+    try {
+        localStorage.setItem('column_config', JSON.stringify(COLUMN_CONFIG));
+        console.log('✅ Configuración de columnas guardada');
+    } catch (e) {
+        console.error('Error guardando configuración de columnas:', e);
+    }
+}
+
+// Hacer todo global
 window.ESTADOS = ESTADOS;
 window.SISTEMAS = SISTEMAS;
+window.COLUMN_CONFIG = COLUMN_CONFIG;
+window.procedimientos = procedimientos;
+window.filterProcedimientos = filterProcedimientos;
+window.getEstadoInfo = getEstadoInfo;
+window.getSubsistemas = getSubsistemas;
+window.getAreasLider = getAreasLider;
+window.getGestoresFuncionales = getGestoresFuncionales;
+window.loadColumnConfig = loadColumnConfig;
+window.saveColumnConfig = saveColumnConfig;
 
 // Exportaciones
 export { 
@@ -319,5 +475,12 @@ export {
     saveToSupabase, 
     syncWithSupabase,
     saveToLocalStorage,
-    loadFromLocalStorage
+    loadFromLocalStorage,
+    filterProcedimientos,
+    getEstadoInfo,
+    getSubsistemas,
+    getAreasLider,
+    getGestoresFuncionales,
+    loadColumnConfig,
+    saveColumnConfig
 };

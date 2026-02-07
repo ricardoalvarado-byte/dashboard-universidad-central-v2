@@ -322,20 +322,38 @@ function handleFileSelect(file, sistema, uploadArea, filePreview, previewTableDi
         return;
     }
 
-    // Mostrar loading
+    // Mostrar loading con timeout
     uploadArea.innerHTML = `
         <div class="upload-icon">⏳</div>
         <p class="upload-text">Procesando archivo...</p>
     `;
 
+    // Agregar timeout de 30 segundos
+    let timeoutId = setTimeout(() => {
+        alert('⏰ Tiempo de espera agotado. El archivo es muy grande o hay un problema de procesamiento.');
+        resetUploadArea(uploadArea, null);
+    }, 30000);
+
     // Importar archivo
     importFromExcel(file, sistema, (error, data) => {
+        // Limpiar timeout
+        clearTimeout(timeoutId);
+        
         if (error) {
+            console.error('Error en importFromExcel:', error);
             alert('Error al procesar el archivo: ' + error.message);
             resetUploadArea(uploadArea, null);
             return;
         }
 
+        if (!data || data.length === 0) {
+            alert('⚠️ No se encontraron procedimientos válidos en el archivo. Verifica los nombres de las columnas.');
+            resetUploadArea(uploadArea, null);
+            return;
+        }
+
+        console.log(`✅ Archivo procesado: ${data.length} procedimientos encontrados`);
+        
         // Mostrar preview
         callback(data);
         showImportPreview(data, sistema, uploadArea, filePreview, previewTableDiv);
@@ -673,11 +691,19 @@ window.updateColumnLabel = (index, label) => {
 };
 
 window.saveColumnsToStorage = () => {
-    localStorage.setItem('column_config', JSON.stringify(COLUMN_CONFIG));
-    alert('✅ Configuración de columnas actualizada exitosamente.');
+    if (typeof saveColumnConfig === 'function') {
+        saveColumnConfig();
+        alert('✅ Configuración de columnas actualizada exitosamente.');
+    } else {
+        localStorage.setItem('column_config', JSON.stringify(COLUMN_CONFIG));
+        alert('✅ Configuración de columnas actualizada exitosamente.');
+    }
 
     // Recargar vista si es necesario
     if (typeof applyFilters === 'function') applyFilters();
+    
+    // Recargar tabla para mostrar cambios
+    if (typeof renderTable === 'function') renderTable();
 
     // Volver a renderizar para asegurar estado visual
     renderColumnsConfig();
