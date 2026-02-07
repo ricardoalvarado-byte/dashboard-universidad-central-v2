@@ -45,9 +45,14 @@
 
 /* Dashboard Container */
 .dashboard-container {
-    max-width: 1920px;
-    margin: 0 auto;
+    max-width: 100%;
+    /* Ocupar todo el ancho disponible */
+    margin: 0;
+    /* Eliminar margen automático para pegar a la izquierda */
     padding: var(--spacing-lg);
+    min-width: 1400px;
+    /* Forzar scroll horizontal al hacer zoom/pantalla pequeña */
+    overflow-x: auto;
     animation: fadeIn 0.5s ease-in-out;
 }
 
@@ -153,8 +158,10 @@
 /* Dashboard Layout */
 .dashboard-layout {
     display: grid;
-    grid-template-columns: 240px 1fr 240px;
+    /* Reducir sidebars a 250px para dar más espacio central */
+    grid-template-columns: 250px 1fr 250px;
     gap: var(--spacing-lg);
+    align-items: start;
 }
 
 /* Sidebars */
@@ -265,7 +272,8 @@
 
 /* KPI Cards */
 .kpi-card {
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-md);
+    /* Restaurar padding cómodo */
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -316,7 +324,8 @@
 }
 
 .kpi-value {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+    /* Restaurar tamaño grande impactante */
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1.1;
@@ -347,12 +356,14 @@
 
 .chart-container {
     position: relative;
-    height: 180px;
+    height: 350px;
+    /* Dona GRANDE y llamativa */
     /* Reducido para que todo quepa en una pantalla */
 }
 
 .chart-container.large {
-    height: 260px;
+    height: 450px;
+    /* Gráfico de barras más alto */
     /* Ajustado para 100% zoom */
 }
 
