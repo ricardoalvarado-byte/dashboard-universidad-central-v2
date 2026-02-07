@@ -359,20 +359,50 @@ function importFromExcel(file, sistema, callback) {
                     if (!getVal(colMap.estado)) continue;
                 }
 
-                // --- NORMALIZACIÓN CRÍTICA DE SISTEMA ---
-                // Estandarizar nombre del sistema para que coincida EXACTAMENTE con los filtros del dashboard
+                // --- NORMALIZACIÓN CRÍTICA DE SISTEMA (VERSIÓN SUPREMA) ---
                 let sistemaFinal = sistemaVal;
+
                 if (sistemaVal) {
-                    const sisNorm = sistemaVal.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                    const sisOrig = sistemaVal.toString();
+                    const sisNorm = sisOrig.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+                    // DEBUG: Ver qué está leyendo exactamente (solo primeras filas y casos raros)
+                    if (results.length < 3) {
+                        console.log(`[Data] Fila ${i} - Sistema Original: "${sisOrig}" - Norm: "${sisNorm}"`);
+                    }
 
                     if (sisNorm.includes('rectoria')) {
                         sistemaFinal = 'Rectoría';
                     } else if (sisNorm.includes('administrativa') || sisNorm.includes('financiera')) {
                         sistemaFinal = 'Vicerrectoría Administrativa y Financiera';
-                    } else if (sisNorm.includes('academica')) {
+                    } else if (sisNorm.includes('academica') || sisNorm.includes('academico')) {
                         sistemaFinal = 'Vicerrectoría Académica';
-                    } else if (sisNorm.includes('programas')) {
+                    } else if (sisNorm.includes('programas') || sisNorm.includes('programa')) {
                         sistemaFinal = 'Vicerrectoría de Programas';
+                    }
+                    // INTENTO ADICIONAL: Buscar abreviaturas comunes
+                    else if (sisNorm === 'va' || sisNorm.startsWith('v.a') || sisNorm.startsWith('v. a')) {
+                        sistemaFinal = 'Vicerrectoría Académica';
+                    }
+                    else if (sisNorm === 'vaf' || sisNorm.startsWith('v.adm')) {
+                        sistemaFinal = 'Vicerrectoría Administrativa y Financiera';
+                    }
+                    else if (sisNorm === 'vp' || sisNorm.startsWith('v.pro') || sisNorm.startsWith('v. pro')) {
+                        sistemaFinal = 'Vicerrectoría de Programas';
+                    }
+                } else {
+                    // Si la columna sistema está vacía, intentamos deducir del nombre del archivo
+                    const fileNameNorm = file.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+                    if (fileNameNorm.includes('academica')) {
+                        sistemaFinal = 'Vicerrectoría Académica';
+                        console.log('[Data] Sistema vacío, deducido por nombre de archivo: Vicerrectoría Académica');
+                    } else if (fileNameNorm.includes('administrativa') || fileNameNorm.includes('financiera')) {
+                        sistemaFinal = 'Vicerrectoría Administrativa y Financiera';
+                    } else if (fileNameNorm.includes('programas')) {
+                        sistemaFinal = 'Vicerrectoría de Programas';
+                    } else if (fileNameNorm.includes('rectoria')) {
+                        sistemaFinal = 'Rectoría';
                     }
                 }
                 // ----------------------------------------
