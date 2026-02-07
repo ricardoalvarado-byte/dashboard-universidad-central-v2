@@ -62,6 +62,8 @@ El sistema detecta automáticamente los siguientes nombres de columnas:
 - **SEGUIMIENTO** - Información de seguimiento
 - **RESPONSABLE CP** - Responsable
 - **SISTEMA** - Se asigna automáticamente según la tarjeta donde cargues
+|---------|-------------|---------|
+
 
 ### ✅ El sistema se asigna automáticamente
 
@@ -146,10 +148,15 @@ Copia exactamente uno de estos estados en tu Excel:
 ## 🛠️ Solución de Problemas
 
 ### ❌ "No se encontraron procedimientos"
+<<<<<<< HEAD
 **Causa**: El archivo está vacío o no se detectaron las columnas principales
 **Solución**: Verifica que al menos tengas estas columnas:
 - `NOMBRE PROCEDIMIENTO` o `NOMBRE`
 - `ESTADO GENERAL` o `ESTADO`
+=======
+**Causa**: El archivo está vacío o las columnas no coinciden
+**Solución**: Verifica que las columnas tengan exactamente los nombres indicados
+>>>>>>> a8b9191723e9649bc83db9e702d338d838c7e6bc
 
 ### ❌ "Error al procesar el archivo"
 **Causa**: Formato de archivo no válido
@@ -166,6 +173,7 @@ Copia exactamente uno de estos estados en tu Excel:
 
 ## 📝 Plantilla de Excel
 
+<<<<<<< HEAD
 ### Ejemplo para Rectoría (Con el formato exacto de tus bases):
 
 | N ID | SISTEMA | SUBSISTEMA | PROCESO | GESTOR FUNCIONAL PROCESO | AREA LÍDER | N° | TIPO | NOMBRE PROCEDIMIENTO | SEGUIMIENTO | RESPONSABLE CP | ESTADO GENERAL |
@@ -174,6 +182,17 @@ Copia exactamente uno de estos estados en tu Excel:
 | 2 | Rectoria | Planeación y Desarrollo | Modelo de Gestión del Servicio | Director de Planeación y Desarrollo | Planeación y Desarrollo | 2 | Procedimiento | Gestión Medición | | Ricardo Alvarado | En revisión |
 
 **Nota**: Puedes incluir TODAS las columnas de tu base de datos. El sistema detectará automáticamente las importantes e ignorará las demás. La columna SISTEMA se asigna automáticamente según la tarjeta donde cargues.
+=======
+### Ejemplo para Rectoría:
+
+| Nombre del Procedimiento | Subsistema | Área Líder | Gestor Funcional | Estado |
+|---------------------------|------------|------------|------------------|--------|
+| Planeación Estratégica | Planeación | Planeación Institucional | Roberto Silva | En Elaboración |
+| Comunicación Institucional | Comunicaciones | Comunicaciones | Miguel Castro | Pendiente |
+| Gestión de Calidad | Calidad | Aseguramiento de la Calidad | Alberto Jiménez | Ajustado |
+
+**Nota**: NO incluyas la columna "Sistema" - se asigna automáticamente.
+>>>>>>> a8b9191723e9649bc83db9e702d338d838c7e6bc
 
 ---
 
