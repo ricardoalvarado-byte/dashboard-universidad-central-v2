@@ -94,10 +94,13 @@ function initDonutChart(stats) {
                         }
                     },
                     datalabels: {
-                        color: '#000000',
+                        color: '#ffffff',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        borderRadius: 4,
+                        padding: 6,
                         font: {
                             weight: 'bold',
-                            size: 13
+                            size: 16
                         },
                         formatter: (value, ctx) => {
                             let sum = 0;
@@ -201,7 +204,7 @@ function initBarChart(stats, rawData) {
                     y: {
                         stacked: true,
                         grid: { display: false },
-                        ticks: { color: '#e2e8f0', autoSkip: false, font: { size: 10 } }
+                        ticks: { color: '#e2e8f0', autoSkip: false, font: { size: 13, weight: '500' } }
                     }
                 },
                 plugins: {
