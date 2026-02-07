@@ -143,18 +143,22 @@ async function fetchFromSupabase() {
             console.log(`✅ Supabase: Se recuperaron ${data.length} registros exitosamente.`);
 
             // Mapear de snake_case (Supabase) a camelCase (App)
-            procedimientos = data.map(p => ({
-                id: p.id,
-                nombre: p.nombre || '',
-                sistema: p.sistema || '',
-                subsistema: p.subsistema || '',
-                areaLider: p.area_lider || '',
-                gestorFuncional: p.gestor_funcional || '',
-                estado: p.estado || 'Pendiente',
-                proceso: p.proceso || '',
-                numero: p.numero || '',
-                updatedAt: p.updated_at || p.created_at || null
-            }));
+procedimientos = data.map(p => ({
+    id: p.id,
+    nombre: p.nombre || '',
+    sistema: p.sistema || '',
+    subsistema: p.subsistema || '',
+    areaLider: p.area_lider || '',
+    gestorFuncional: p.gestor_funcional || '',
+    gestorOperativo: p.gestor_operativo || '',
+    estado: p.estado || 'Pendiente',
+    proceso: p.proceso || '',
+    numero: p.numero || '',
+    tipo: p.tipo || '',
+    seguimiento: p.seguimiento || '',
+    responsableCp: p.responsable_cp || '',
+    updatedAt: p.updated_at || p.created_at || null
+}));
 
             // Calcular última fecha de actualización
             const dates = procedimientos
@@ -198,9 +202,16 @@ async function saveToSupabase(dataToSave = procedimientos) {
             subsistema: p.subsistema,
             area_lider: p.areaLider,
             gestor_funcional: p.gestorFuncional,
+            gestor_operativo: p.gestorOperativo || '',
             estado: p.estado,
             proceso: p.proceso,
-            numero: p.numero
+            numero: p.numero,
+            tipo: p.tipo || '',
+            seguimiento: p.seguimiento || '',
+            responsable_cp: p.responsableCp || '',
+            // Guardar columnas adicionales si existen
+            gestor_funcional_completo: p.gestorFuncionalCompleto || p.gestorFuncional || '',
+            area_lider_completo: p.areaLiderCompleto || p.areaLider || ''
         }));
 
         const { error } = await window.supabase
@@ -307,7 +318,19 @@ function importFromExcel(file, sistema, callback) {
             if (hIndex === -1) hIndex = 0; // Fallback a la primera fila
 
             const headers = raw[hIndex] || [];
-            const colMap = { nombre: -1, subsistema: -1, area: -1, gestor: -1, estado: -1, proceso: -1, numero: -1 };
+            const colMap = { 
+                nombre: -1, 
+                subsistema: -1, 
+                area: -1, 
+                gestor: -1, 
+                gestorOperativo: -1,
+                estado: -1, 
+                proceso: -1, 
+                numero: -1,
+                tipo: -1,
+                seguimiento: -1,
+                responsable: -1
+            };
 
             headers.forEach((h, idx) => {
                 if (h === undefined || h === null) return;
@@ -318,9 +341,13 @@ function importFromExcel(file, sistema, callback) {
                 else if (hh.includes('SUBSISTEMA')) colMap.subsistema = idx;
                 else if (hh.includes('AREA LÍDER') || hh.includes('AREA LIDER')) colMap.area = idx;
                 else if (hh.includes('GESTOR FUNCIONAL PROCESO') || hh.includes('GESTOR FUNCIONAL')) colMap.gestor = idx;
+                else if (hh.includes('GESTOR OPERATIVO')) colMap.gestorOperativo = idx;
                 else if (hh.includes('ESTADO GENERAL') || hh === 'ESTADO') colMap.estado = idx;
                 else if (hh === 'PROCESO') colMap.proceso = idx;
                 else if (hh === 'N°' || hh === 'Nº' || hh === 'NUMERO' || hh === 'N.') colMap.numero = idx;
+                else if (hh === 'TIPO') colMap.tipo = idx;
+                else if (hh.includes('SEGUIMIENTO')) colMap.seguimiento = idx;
+                else if (hh.includes('RESPONSABLE CP')) colMap.responsable = idx;
             });
 
             console.log("Detección de columnas:", colMap);
@@ -346,9 +373,13 @@ function importFromExcel(file, sistema, callback) {
                     subsistema: colMap.subsistema !== -1 ? (row[colMap.subsistema] || '').toString().trim() : '',
                     areaLider: colMap.area !== -1 ? (row[colMap.area] || '').toString().trim() : '',
                     gestorFuncional: colMap.gestor !== -1 ? (row[colMap.gestor] || '').toString().trim() : '',
+                    gestorOperativo: colMap.gestorOperativo !== -1 ? (row[colMap.gestorOperativo] || '').toString().trim() : '',
                     estado: colMap.estado !== -1 ? (row[colMap.estado] || 'Pendiente').toString().trim() : 'Pendiente',
                     proceso: colMap.proceso !== -1 ? (row[colMap.proceso] || '').toString().trim() : '',
-                    numero: colMap.numero !== -1 ? (row[colMap.numero] || '').toString().trim() : ''
+                    numero: colMap.numero !== -1 ? (row[colMap.numero] || '').toString().trim() : '',
+                    tipo: colMap.tipo !== -1 ? (row[colMap.tipo] || '').toString().trim() : '',
+                    seguimiento: colMap.seguimiento !== -1 ? (row[colMap.seguimiento] || '').toString().trim() : '',
+                    responsableCp: colMap.responsable !== -1 ? (row[colMap.responsable] || '').toString().trim() : ''
                 });
             }
 
