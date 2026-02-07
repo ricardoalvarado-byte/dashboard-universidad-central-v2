@@ -18,6 +18,7 @@ function initFilters() {
                 sistemaFilters.querySelectorAll('.chip').forEach(chip => chip.classList.remove('active'));
                 e.target.classList.add('active');
                 currentFilters.sistema = e.target.dataset.sistema;
+                updateSubsistemaOptions(); // Actualizar subsistemas dinámicamente
                 applyFilters();
             }
         });
@@ -67,7 +68,23 @@ function initFilters() {
 function updateSubsistemaOptions() {
     const filter = document.getElementById('subsistemaFilter');
     if (!filter) return;
-    const subs = typeof window.getSubsistemas === 'function' ? window.getSubsistemas() : [];
+
+    // Obtener procedimientos base (filtrados por sistema si aplica)
+    let validProcs = window.procedimientos || [];
+
+    if (currentFilters.sistema !== 'all') {
+        // Filtrado exacto porque los chips usan el nombre completo
+        validProcs = validProcs.filter(p => p.sistema === currentFilters.sistema);
+    }
+
+    const subs = [...new Set(validProcs
+        .map(p => p.subsistema)
+        .filter(s => s && s.trim() !== '')
+    )].sort();
+
+    // Guardar selección actual para intentar mantenerla
+    const currentVal = filter.value;
+
     filter.innerHTML = '<option value="all">Todos los subsistemas</option>';
     subs.forEach(s => {
         const op = document.createElement('option');
@@ -75,6 +92,14 @@ function updateSubsistemaOptions() {
         op.textContent = s;
         filter.appendChild(op);
     });
+
+    // Mantener selección si sigue siendo válida, si no, resetear
+    if (subs.includes(currentVal)) {
+        filter.value = currentVal;
+    } else {
+        filter.value = 'all';
+        currentFilters.subsistema = 'all';
+    }
 }
 
 function initEstadoFilters() {
