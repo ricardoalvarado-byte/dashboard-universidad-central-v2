@@ -86,7 +86,7 @@ function initEstadoFilters() {
     container.appendChild(createEstadoFilterItem({ nombre: 'Todos', color: '#64748b' }, 'all'));
 
     // Estados reales
-    ESTADOS.forEach(e => {
+    Object.values(ESTADOS).forEach(e => {
         container.appendChild(createEstadoFilterItem(e, e.nombre));
     });
 }
@@ -170,7 +170,7 @@ function applyFilters() {
     const filteredTotalEl = document.getElementById('filteredCount');
     const globalTotalEl = document.getElementById('totalCount');
     if (filteredTotalEl) filteredTotalEl.textContent = data.length;
-    if (globalTotalEl) globalTotalEl.textContent = procedimientos.length;
+    if (globalTotalEl) globalTotalEl.textContent = (window.procedimientos || []).length;
 }
 
 function updateConventionsPanel(filteredData) {
@@ -181,7 +181,7 @@ function updateConventionsPanel(filteredData) {
 
     const stats = calculateStats(filteredData);
 
-    ESTADOS.forEach(estado => {
+    Object.values(ESTADOS).forEach(estado => {
         const count = stats.porEstado[estado.nombre] || 0;
 
         const item = document.createElement('div');

@@ -457,7 +457,6 @@ function resetUploadArea(uploadArea, fileInput) {
         fileInput.value = '';
     }
 }
-}
 
 // Función para inicializar botón de guardado total
 function initSaveButton() {

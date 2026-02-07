@@ -44,7 +44,7 @@ function initTable() {
     }
 
     // Renderizar tabla inicial
-    updateTable(procedimientos);
+    updateTable(window.procedimientos || []);
 }
 
 // Función para actualizar la tabla

@@ -27,7 +27,7 @@ function initDonutChart(stats) {
     const data = [];
     const colors = [];
 
-    ESTADOS.forEach(estado => {
+    Object.values(ESTADOS).forEach(estado => {
         const count = stats.porEstado[estado.nombre] || 0;
         if (count > 0) {
             labels.push(estado.nombre);

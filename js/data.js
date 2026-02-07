@@ -478,22 +478,4 @@ window.getGestoresFuncionales = getGestoresFuncionales;
 window.loadColumnConfig = loadColumnConfig;
 window.saveColumnConfig = saveColumnConfig;
 
-// Exportaciones
-export { 
-    procedimientos, 
-    COLUMN_CONFIG, 
-    ESTADOS, 
-    SISTEMAS, 
-    importFromExcel, 
-    saveToSupabase, 
-    syncWithSupabase,
-    saveToLocalStorage,
-    loadFromLocalStorage,
-    filterProcedimientos,
-    getEstadoInfo,
-    getSubsistemas,
-    getAreasLider,
-    getGestoresFuncionales,
-    loadColumnConfig,
-    saveColumnConfig
-};
+// Todo ya está disponible globalmente a través de window object
