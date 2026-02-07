@@ -128,14 +128,14 @@ function handleLogin(e) {
     const usernameInput = document.getElementById('username').value.trim();
     const passwordInput = document.getElementById('password').value;
     const errorDiv = document.getElementById('loginError');
-    
+
     console.log("[Admin] Usuario:", usernameInput);
     console.log("[Admin] Contraseña:", passwordInput ? "***" : "vacía");
 
     // Credenciales esperadas
     const VALID_USER = 'RALVARADOA';
     const VALID_PASS = 'RIKI2026$';
-    
+
     console.log("[Admin] Usuario válido:", VALID_USER);
     console.log("[Admin] Validando usuario:", usernameInput.toUpperCase(), "===?", VALID_USER, "=>", usernameInput.toUpperCase() === VALID_USER);
     console.log("[Admin] Validando contraseña:", passwordInput, "===?", VALID_PASS, "=>", passwordInput === VALID_PASS);
@@ -204,7 +204,7 @@ function switchTab(tabName) {
 // Función para inicializar cargadores múltiples por sistema
 function initMultiSystemUpload() {
     console.log("[Admin] Inicializando sistema de carga por sistema...");
-    
+
     const uploadCards = document.querySelectorAll('.system-upload-card');
     if (uploadCards.length === 0) {
         console.warn("[Admin] No se encontraron tarjetas de upload. El DOM podría no estar listo.");
@@ -355,7 +355,7 @@ function handleFileSelect(file, sistema, uploadArea, filePreview, previewTableDi
     importFromExcel(file, sistema, (error, data) => {
         // Limpiar timeout
         clearTimeout(timeoutId);
-        
+
         if (error) {
             console.error('Error en importFromExcel:', error);
             alert('Error al procesar el archivo: ' + error.message);
@@ -370,7 +370,7 @@ function handleFileSelect(file, sistema, uploadArea, filePreview, previewTableDi
         }
 
         console.log(`✅ Archivo procesado: ${data.length} procedimientos encontrados`);
-        
+
         // Mostrar preview
         callback(data);
         showImportPreview(data, sistema, uploadArea, filePreview, previewTableDiv);
@@ -616,24 +616,36 @@ function updateSystemCounts() {
     const countElements = document.querySelectorAll('.system-count');
     console.log(`[Admin] Actualizando contadores UI para ${window.procedimientos.length} registros...`);
 
+    // Función auxiliar para normalizar nombres de sistema
+    const normalizeSystemName = (name) => {
+        if (!name) return '';
+        return name.toString()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Quitar tildes
+            .toLowerCase()
+            .replace(/\s+/g, ' ') // Espacios múltiples a uno solo
+            .replace('vicerrectoria', 'v.') // Abreviar vicerrectoría
+            .replace('v. ', 'v.') // Unificar v. espacio
+            .replace('administrativa y financiera', 'administrativa') // Simplificar esta específica
+            .trim();
+    };
+
     countElements.forEach(el => {
         const sistemaDataset = el.dataset.sistema;
-        // Normalización ultra-robusta
-        const sistemaPanelNorm = normalizeText(sistemaDataset)
-            .replace('vicerrectoria', 'v.')
-            .replace('v. ', 'v.');
+        const sistemaPanelNorm = normalizeSystemName(sistemaDataset);
 
+        // Filtrar procedimientos que coincidan con este sistema (comparación flexible)
         const matches = window.procedimientos.filter(p => {
-            const procSistemaNorm = normalizeText(p.sistema)
-                .replace('vicerrectoria', 'v.')
-                .replace('v. ', 'v.');
+            const procSistemaNorm = normalizeSystemName(p.sistema);
 
+            // Si la normalización exacta falla, probamos contenencia
             return procSistemaNorm === sistemaPanelNorm ||
                 procSistemaNorm.includes(sistemaPanelNorm) ||
                 sistemaPanelNorm.includes(procSistemaNorm);
         });
 
         const count = matches.length;
+        console.log(`[Admin] Sistema: "${sistemaDataset}" -> Norm: "${sistemaPanelNorm}" = ${count} procedimientos`);
+
         el.textContent = `${count} procedimiento${count !== 1 ? 's' : ''}`;
 
         // Actualizar también el dataset de los botones de borrado cercanos para consistencia
@@ -719,7 +731,7 @@ window.saveColumnsToStorage = () => {
 
     // Recargar vista si es necesario
     if (typeof applyFilters === 'function') applyFilters();
-    
+
     // Recargar tabla para mostrar cambios
     if (typeof renderTable === 'function') renderTable();
 

@@ -32,6 +32,11 @@ const ESTADOS = {
     'En el sistema': { color: '#059669', porcentaje: 100, descripcion: 'Implementado en sistema' }
 };
 
+// Inyectar nombre en cada objeto de estado para evitar errores en otras partes
+Object.keys(ESTADOS).forEach(key => {
+    ESTADOS[key].nombre = key;
+});
+
 // Sistemas organizacionales
 const SISTEMAS = [
     'Rectoría',
@@ -506,18 +511,31 @@ function calculateStats(data) {
         porArea: {}
     };
 
-    // Contar por estado
-    Object.values(ESTADOS).forEach(estado => {
-        stats.porEstado[estado.nombre] = 0;
+    // Inicializar contadores por estado canónico
+    // Convertimos ESTADOS a un mapa de búsqueda normalizado
+    const estadoMap = {};
+    Object.keys(ESTADOS).forEach(nombreEstado => {
+        stats.porEstado[nombreEstado] = 0;
+
+        // Crear clave normalizada (sin tildes, minúsculas) -> Nombre Real
+        const key = nombreEstado.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+        estadoMap[key] = nombreEstado;
     });
 
     // Contar por sistema y área
     data.forEach(proc => {
-        // Por estado
-        if (proc.estado && stats.porEstado[proc.estado] !== undefined) {
-            stats.porEstado[proc.estado]++;
-        } else if (proc.estado) {
-            stats.porEstado[proc.estado] = (stats.porEstado[proc.estado] || 0) + 1;
+        // Por estado (con normalización)
+        if (proc.estado) {
+            const estadoNorm = proc.estado.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            const estadoReal = estadoMap[estadoNorm];
+
+            if (estadoReal) {
+                stats.porEstado[estadoReal]++;
+            } else {
+                // Si no coincide con ninguno conocido, lo guardamos tal cual (para debug)
+                // Opcional: podrías asignarlo a 'Pendiente' o similar si prefieres
+                stats.porEstado[proc.estado] = (stats.porEstado[proc.estado] || 0) + 1;
+            }
         }
 
         // Por sistema
@@ -527,7 +545,8 @@ function calculateStats(data) {
 
         // Por área
         if (proc.areaLider) {
-            stats.porArea[proc.areaLider] = (stats.porArea[proc.areaLider] || 0) + 1;
+            const area = proc.areaLider.trim();
+            stats.porArea[area] = (stats.porArea[area] || 0) + 1;
         }
     });
 
