@@ -87,6 +87,7 @@ async function syncWithSupabase() {
             }));
 
             lastUpdate = new Date();
+            window.lastUpdateDate = lastUpdate;
             saveToLocalStorage();
             return procedimientos;
         } else {
@@ -170,6 +171,9 @@ async function saveToSupabase(dataToSave = procedimientos) {
 function saveToLocalStorage() {
     try {
         localStorage.setItem('uc_procedimientos', JSON.stringify(procedimientos));
+        if (lastUpdate) {
+            localStorage.setItem('uc_last_update', lastUpdate.toISOString());
+        }
         window.procedimientos = procedimientos; // Sincronizar global
         console.log(`💾 LocalStorage: ${procedimientos.length} registros guardados localmente.`);
         return true;
@@ -184,6 +188,11 @@ function loadFromLocalStorage() {
         const saved = localStorage.getItem('uc_procedimientos');
         if (saved) {
             procedimientos = JSON.parse(saved);
+            const savedUpdate = localStorage.getItem('uc_last_update');
+            if (savedUpdate) {
+                lastUpdate = new Date(savedUpdate);
+                window.lastUpdateDate = lastUpdate;
+            }
             console.log(`📂 LocalStorage: ${procedimientos.length} registros cargados localmente.`);
             window.procedimientos = procedimientos;
             return procedimientos;
