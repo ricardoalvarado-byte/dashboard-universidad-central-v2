@@ -9,16 +9,16 @@ let lastUpdate = null;
 let COLUMN_CONFIG = [
     { key: 'sistema', label: 'SISTEMA', visible: true, editable: false },
     { key: 'subsistema', label: 'SUBSISTEMA', visible: true, editable: true },
-    { key: 'proceso', label: 'PROCESO', visible: false, editable: true },
-    { key: 'gestorFuncional', label: 'GESTOR FUNCIONAL PROCESO', visible: true, editable: true },
+    { key: 'proceso', label: 'PROCESO', visible: true, editable: true },
+    { key: 'gestorFuncional', label: 'GESTOR FUNCIONAL', visible: false, editable: true },
     { key: 'gestorOperativo', label: 'GESTOR OPERATIVO', visible: false, editable: true },
-    { key: 'areaLider', label: 'AREA LÍDER', visible: true, editable: true },
+    { key: 'areaLider', label: 'ÁREA', visible: true, editable: true },
     { key: 'numero', label: 'N°', visible: true, editable: true },
     { key: 'tipo', label: 'TIPO', visible: false, editable: true },
-    { key: 'nombre', label: 'NOMBRE PROCEDIMIENTO', visible: true, editable: true },
-    { key: 'seguimiento', label: 'SEGUIMIENTO', visible: false, editable: true },
+    { key: 'nombre', label: 'PROCEDIMIENTOS', visible: true, editable: true },
+    { key: 'seguimiento', label: 'REVISIÓN', visible: true, editable: true },
     { key: 'responsableCp', label: 'RESPONSABLE CP', visible: false, editable: true },
-    { key: 'estado', label: 'ESTADO GENERAL', visible: true, editable: false }
+    { key: 'estado', label: 'ESTADO', visible: true, editable: true }
 ];
 
 // Estados disponibles para los procedimientos
@@ -213,7 +213,7 @@ function importFromExcel(file, sistema, callback) {
             // Buscar la mejor fila de cabecera (la que contenga más palabras clave)
             let hIndex = -1;
             let maxMatches = -1;
-            const targetKeywords = ['NOMBRE', 'PROCEDIMIENTO', 'ESTADO', 'SISTEMA', 'SUBSISTEMA', 'AREA', 'GESTOR', 'TIPO', 'NUMERO'];
+            const targetKeywords = ['NOMBRE', 'PROCEDIMIENTO', 'ESTADO', 'SISTEMA', 'SUBSISTEMA', 'AREA', 'GESTOR', 'TIPO', 'NUMERO', 'REVISION', 'SEGUIMIENTO'];
 
             for (let i = 0; i < Math.min(30, raw.length); i++) {
                 const row = raw[i];
@@ -223,7 +223,7 @@ function importFromExcel(file, sistema, callback) {
                 const rowStr = row.join(' ').toUpperCase();
 
                 // Prioridad absoluta si contiene el nombre exacto de la columna principal
-                if (rowStr.includes('NOMBRE PROCEDIMIENTO') || rowStr.includes('SUBSISTEMA') || rowStr.includes('SISTEMA') || rowStr.includes('ESTADO GENERAL')) {
+                if (rowStr.includes('PROCEDIMIENTOS') || rowStr.includes('SUBSISTEMA') || rowStr.includes('SISTEMA') || rowStr.includes('AREA') || rowStr.includes('REVISIÓN')) {
                     hIndex = i;
                     break;
                 }
@@ -260,18 +260,18 @@ function importFromExcel(file, sistema, callback) {
                 if (h === undefined || h === null) return;
                 const hh = h.toString().trim().toUpperCase();
 
-                if (hh.includes('NOMBRE PROCEDIMIENTO')) colMap.nombre = idx;
+                if (hh.includes('NOMBRE PROCEDIMIENTO') || hh.includes('PROCEDIMIENTOS')) colMap.nombre = idx;
                 else if (hh === 'NOMBRE' && colMap.nombre === -1) colMap.nombre = idx;
                 else if (hh === 'SISTEMA') colMap.sistema = idx;
                 else if (hh.includes('SUBSISTEMA')) colMap.subsistema = idx;
-                else if (hh.includes('AREA LÍDER') || hh.includes('AREA LIDER')) colMap.area = idx;
+                else if (hh.includes('AREA LÍDER') || hh.includes('AREA LIDER') || hh === 'ÁREA' || hh === 'AREA') colMap.area = idx;
                 else if (hh.includes('GESTOR FUNCIONAL PROCESO') || hh.includes('GESTOR FUNCIONAL')) colMap.gestor = idx;
                 else if (hh.includes('GESTOR OPERATIVO')) colMap.gestorOperativo = idx;
                 else if (hh.includes('ESTADO GENERAL') || hh === 'ESTADO') colMap.estado = idx;
                 else if (hh === 'PROCESO') colMap.proceso = idx;
                 else if (hh === 'N°' || hh === 'Nº' || hh === 'NUMERO' || hh === 'N.') colMap.numero = idx;
                 else if (hh === 'TIPO') colMap.tipo = idx;
-                else if (hh.includes('SEGUIMIENTO')) colMap.seguimiento = idx;
+                else if (hh.includes('SEGUIMIENTO') || hh.includes('REVISIÓN') || hh.includes('REVISION')) colMap.seguimiento = idx;
                 else if (hh.includes('RESPONSABLE CP')) colMap.responsable = idx;
             });
 
