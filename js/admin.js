@@ -47,6 +47,8 @@ const AuthModule = (() => {
     };
 })();
 
+let isAuthenticated = false;
+
 // Función para inicializar panel administrativo
 function initAdmin() {
     // Toggle entre vistas
@@ -55,22 +57,7 @@ function initAdmin() {
 
     if (toggleViewBtn) {
         toggleViewBtn.addEventListener('click', () => {
-            // Verificar sesión antes de mostrar
-            if (AuthModule.checkSession()) {
-                showAdminView();
-            } else {
-                // Si no hay sesión, mostrar modal de login
-                const password = prompt("Ingrese contraseña de administrador:");
-                if (password) {
-                    AuthModule.login(password).then(success => {
-                        if (success) {
-                            showAdminView();
-                        } else {
-                            alert("Contraseña incorrecta");
-                        }
-                    });
-                }
-            }
+            showAdminView();
         });
     }
 
@@ -80,81 +67,65 @@ function initAdmin() {
             showAdminView();
         }
     }
-}
-
-// Reemplazar funciones globales antiguas
-function handleLogin(e) {
-    e.preventDefault();
-    const passwordInput = document.getElementById('adminPassword');
-    const password = passwordInput.value;
-
-    AuthModule.login(password).then(success => {
-        if (success) {
-            showAdminView();
-            passwordInput.value = '';
-        } else {
-            alert('Credenciales inválidas');
-            // Shake effect
-            passwordInput.parentElement.classList.add('shake');
-            setTimeout(() => passwordInput.parentElement.classList.remove('shake'), 500);
-        }
+    // Tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.dataset.tab;
+            switchTab(tabName);
+        });
     });
-}
 
-function handleLogout() {
-    if (confirm('¿Cerrar sesión de administrador?')) {
-        AuthModule.logout();
+    // Inicializar cargadores de archivos para cada sistema
+    initMultiSystemUpload();
+
+    // Inicializar botones de borrado y guardado
+    initDeleteButtons();
+    initSaveButton();
+
+    // Actualizar contadores al cargar
+    updateSystemCounts();
+
+    // Verificar configuración de columnas
+    renderColumnsConfig();
+
+    // Verificar sesión guardada (CRÍTICO para refrescar página)
+    checkSavedSession();
+
+    // Botón para volver a vista de usuario desde el panel interno
+    const viewDashboardBtn = document.getElementById('viewDashboardBtn');
+    if (viewDashboardBtn) {
+        viewDashboardBtn.addEventListener('click', () => {
+            showDashboardView();
+        });
     }
-}
 
-// ... Resto del código original ...
-// Tabs
-const tabBtns = document.querySelectorAll('.tab-btn');
-tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const tabName = btn.dataset.tab;
-        switchTab(tabName);
+    // Listener para el formulario de login
+    const loginForm = document.getElementById('loginFormElement');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+
+    // Listener para el botón de logout
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+
+    // Verificar estado de Supabase
+    checkSupabaseStatus();
+
+    // Sincronizar UI con datos globales cuando carguen
+    window.addEventListener('dataLoaded', () => {
+        console.log("[Admin] Datos cargados, actualizando contadores...");
+        updateSystemCounts();
     });
-});
 
-// Inicializar cargadores de archivos para cada sistema
-initMultiSystemUpload();
-
-// Inicializar botones de borrado y guardado
-initDeleteButtons();
-initSaveButton();
-
-// Actualizar contadores al cargar
-updateSystemCounts();
-
-// Verificar configuración de columnas
-renderColumnsConfig();
-
-// Verificar sesión guardada (CRÍTICO para refrescar página)
-checkSavedSession();
-
-// Botón para volver a vista de usuario desde el panel interno
-const viewDashboardBtn = document.getElementById('viewDashboardBtn');
-if (viewDashboardBtn) {
-    viewDashboardBtn.addEventListener('click', () => {
-        showDashboardView();
-    });
-}
-
-// Verificar estado de Supabase
-checkSupabaseStatus();
-
-// Sincronizar UI con datos globales cuando carguen
-window.addEventListener('dataLoaded', () => {
-    console.log("[Admin] Datos cargados, actualizando contadores...");
-    updateSystemCounts();
-});
-
-// CRÍTICO: Si los datos ya están cargados (porque fetch terminó rápido), actualizar de una vez
-if (window.procedimientos && window.procedimientos.length > 0) {
-    console.log("[Admin] Datos ya presentes al iniciar, actualizando contadores...");
-    updateSystemCounts();
-}
+    // CRÍTICO: Si los datos ya están cargados (porque fetch terminó rápido), actualizar de una vez
+    if (window.procedimientos && window.procedimientos.length > 0) {
+        console.log("[Admin] Datos ya presentes al iniciar, actualizando contadores...");
+        updateSystemCounts();
+    }
 }
 
 function checkSupabaseStatus() {
