@@ -86,7 +86,23 @@ async function syncWithSupabase() {
                 updatedAt: p.updated_at || p.created_at || null
             }));
 
-            lastUpdate = new Date();
+            // Calcular la fecha real de última actualización basada en los datos
+            if (procedimientos.length > 0) {
+                // Obtener todas las fechas válidas
+                const fechas = procedimientos
+                    .map(p => p.updatedAt ? new Date(p.updatedAt) : null)
+                    .filter(d => d && !isNaN(d.getTime()));
+
+                if (fechas.length > 0) {
+                    // Encontrar la fecha más reciente
+                    lastUpdate = new Date(Math.max(...fechas));
+                } else {
+                    lastUpdate = new Date();
+                }
+            } else {
+                lastUpdate = new Date();
+            }
+
             window.lastUpdateDate = lastUpdate;
             saveToLocalStorage();
             return procedimientos;
