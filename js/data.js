@@ -359,9 +359,27 @@ function importFromExcel(file, sistema, callback) {
                     if (!getVal(colMap.estado)) continue;
                 }
 
+                // --- NORMALIZACIÓN CRÍTICA DE SISTEMA ---
+                // Estandarizar nombre del sistema para que coincida EXACTAMENTE con los filtros del dashboard
+                let sistemaFinal = sistemaVal;
+                if (sistemaVal) {
+                    const sisNorm = sistemaVal.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+                    if (sisNorm.includes('rectoria')) {
+                        sistemaFinal = 'Rectoría';
+                    } else if (sisNorm.includes('administrativa') || sisNorm.includes('financiera')) {
+                        sistemaFinal = 'Vicerrectoría Administrativa y Financiera';
+                    } else if (sisNorm.includes('academica')) {
+                        sistemaFinal = 'Vicerrectoría Académica';
+                    } else if (sisNorm.includes('programas')) {
+                        sistemaFinal = 'Vicerrectoría de Programas';
+                    }
+                }
+                // ----------------------------------------
+
                 results.push({
                     id: Date.now() + results.length + Math.floor(Math.random() * 10000),
-                    sistema: sistemaVal,
+                    sistema: sistemaFinal,
                     subsistema: getVal(colMap.subsistema),
                     proceso: getVal(colMap.proceso),
                     gestorFuncional: getVal(colMap.gestorFuncional),
