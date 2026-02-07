@@ -213,10 +213,10 @@ function importFromExcel(file, sistema, callback) {
                 throw new Error("El archivo parece estar vacío.");
             }
 
-            // Buscar la mejor fila de cabecera (la que contenga 'NOMBRE PROCEDIMIENTO' o más palabras clave)
+            // Buscar la mejor fila de cabecera (la que contenga más palabras clave)
             let hIndex = -1;
             let maxMatches = -1;
-            const targetKeywords = ['NOMBRE', 'PROCEDIMIENTO', 'ESTADO', 'SISTEMA', 'SUBSISTEMA', 'AREA', 'GESTOR'];
+            const targetKeywords = ['NOMBRE', 'PROCEDIMIENTO', 'ESTADO', 'SISTEMA', 'SUBSISTEMA', 'AREA', 'GESTOR', 'TIPO', 'NUMERO'];
 
             for (let i = 0; i < Math.min(30, raw.length); i++) {
                 const row = raw[i];
@@ -226,7 +226,7 @@ function importFromExcel(file, sistema, callback) {
                 const rowStr = row.join(' ').toUpperCase();
 
                 // Prioridad absoluta si contiene el nombre exacto de la columna principal
-                if (rowStr.includes('NOMBRE PROCEDIMIENTO') || rowStr.includes('SUBSISTEMA')) {
+                if (rowStr.includes('NOMBRE PROCEDIMIENTO') || rowStr.includes('SUBSISTEMA') || rowStr.includes('SISTEMA') || rowStr.includes('ESTADO GENERAL')) {
                     hIndex = i;
                     break;
                 }
@@ -279,19 +279,33 @@ function importFromExcel(file, sistema, callback) {
             });
 
             console.log("Detección de columnas:", colMap);
+            console.log("Headers encontrados:", headers);
 
             if (colMap.nombre === -1) {
                 // Si no encontramos la columna nombre, intentamos buscar una que se le parezca
-                colMap.nombre = headers.findIndex(h => h && h.toString().toUpperCase().includes('NOMBRE'));
+                colMap.nombre = headers.findIndex(h => h && h.toString().toUpperCase().includes('NOMBRE PROCEDIMIENTO'));
+                if (colMap.nombre === -1) {
+                    colMap.nombre = headers.findIndex(h => h && h.toString().toUpperCase().includes('NOMBRE'));
+                }
             }
 
             const results = [];
+            console.log(`Procesando filas desde la ${hIndex + 1} hasta ${raw.length}`);
             for (let i = hIndex + 1; i < raw.length; i++) {
                 const row = raw[i];
-                // Validar que la fila tenga contenido en la columna de nombre
-                if (!row || colMap.nombre === -1 || !row[colMap.nombre]) continue;
+                // Validar que la fila tenga contenido
+                if (!row || !Array.isArray(row)) continue;
+                
+                // Si tenemos columna nombre y está vacía, saltar
+                if (colMap.nombre !== -1 && (!row[colMap.nombre] || row[colMap.nombre].toString().trim() === '')) continue;
+                
+                // Si no tenemos columna nombre, usar cualquier columna con contenido
+                if (colMap.nombre === -1) {
+                    const hasContent = row.some(cell => cell && cell.toString().trim() !== '');
+                    if (!hasContent) continue;
+                }
 
-                const procNombre = row[colMap.nombre].toString().trim();
+                const procNombre = colMap.nombre !== -1 ? row[colMap.nombre].toString().trim() : `Procedimiento ${results.length + 1}`;
                 if (!procNombre) continue;
 
                 results.push({
